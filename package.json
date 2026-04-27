@@ -1,0 +1,19 @@
+{
+  "name": "grow-somoim",
+  "version": "1.0.0",
+  "description": "All-in-one API server for groups/classes/community",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "check": "node --check src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "uuid": "^11.0.3",
+    "ws": "^8.18.0"
+  }
+}
