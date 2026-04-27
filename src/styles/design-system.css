@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-500: 20 142 69;
+  --surface-base: 244 248 245;
+  --surface-elevated: 255 255 255;
+  --surface-muted: 230 239 233;
+  --text-primary: 16 34 23;
+  --text-secondary: 62 84 70;
+  --border-soft: 211 226 216;
+}
+
+.dark {
+  --surface-base: 11 31 20;
+  --surface-elevated: 20 41 30;
+  --surface-muted: 31 55 42;
+  --text-primary: 236 247 240;
+  --text-secondary: 176 198 184;
+  --border-soft: 57 85 68;
+}
+
+@layer base {
+  body {
+    @apply bg-surface-base text-text-primary font-sans antialiased;
+  }
+
+  h1 {
+    @apply font-display text-4xl leading-tight font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply font-display text-3xl leading-tight font-bold;
+  }
+
+  h3 {
+    @apply text-2xl leading-snug font-semibold;
+  }
+
+  p {
+    @apply text-base leading-7;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply btn bg-surface-elevated text-text-primary ring-1 ring-border-soft hover:bg-brand-50;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-brand-600 hover:bg-brand-50;
+  }
+
+  .card {
+    @apply rounded-2xl border border-border-soft bg-surface-elevated p-5 shadow-card;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-border-soft bg-surface-elevated px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .badge-brand {
+    @apply badge bg-brand-100 text-brand-700;
+  }
+
+  .badge-muted {
+    @apply badge bg-surface-muted text-text-secondary;
+  }
+
+  .tab {
+    @apply inline-flex items-center border-b-2 border-transparent px-3 py-2 text-sm font-medium text-text-secondary transition-colors;
+  }
+
+  .tab-active {
+    @apply border-brand-500 text-brand-600;
+  }
+}
