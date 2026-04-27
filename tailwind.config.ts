@@ -1,32 +1,30 @@
 import type { Config } from 'tailwindcss';
 
-export default {
+const config: Config = {
+  darkMode: 'class',
   content: ['./client/index.html', './client/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         brand: {
-          50: '#f5f7ff',
-          100: '#e8ecff',
-          500: '#4f6df5',
-          700: '#2f49cc'
+          50: '#EFFBF4',
+          100: '#D8F5E4',
+          200: '#B2EBCB',
+          300: '#81DDA9',
+          400: '#4FCA84',
+          500: '#148E45',
+          600: '#117A3C',
+          700: '#0D612F',
+          800: '#094B24',
+          900: '#053117',
         },
-        neutral: {
-          50: '#f9fafb',
-          900: '#111827'
-        }
-      },
-      borderRadius: {
-        lg: '0.75rem',
-        xl: '1rem'
-      },
-      boxShadow: {
-        card: '0 8px 24px rgba(17, 24, 39, 0.08)'
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif']
-      }
-    }
-  },
-  plugins: []
-} satisfies Config;
+        accent: {
+          mint: '#3BCB8A',
+          sky: '#3EA6FF',
+          amber: '#FFB547',
+          coral: '#FF7A59',
+        },
+        surface: {
+          base: '#F4F8F5',
+          elevated: '#FFFFFF',
+          muted: '#E6EFE9',
