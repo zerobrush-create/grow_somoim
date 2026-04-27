@@ -1,0 +1,20 @@
+{
+  "name": "grow_somoim",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "build": "tsx script/build.ts",
+    "typecheck": "npm --workspace client run typecheck && npm --workspace server run typecheck"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}

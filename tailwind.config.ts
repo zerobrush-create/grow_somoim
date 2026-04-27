@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   darkMode: 'class',
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx,html}'],
+  content: ['./client/index.html', './client/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -28,38 +28,3 @@ const config: Config = {
           base: '#F4F8F5',
           elevated: '#FFFFFF',
           muted: '#E6EFE9',
-          inverse: '#0B1F14',
-        },
-        text: {
-          primary: '#102217',
-          secondary: '#3E5446',
-          tertiary: '#6B8172',
-          inverse: '#ECF7F0',
-        },
-        border: {
-          soft: '#D3E2D8',
-          strong: '#8EAB99',
-        },
-      },
-      fontFamily: {
-        sans: ['Pretendard', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'Pretendard', 'sans-serif'],
-      },
-      boxShadow: {
-        card: '0 8px 24px rgba(16, 34, 23, 0.08)',
-        focus: '0 0 0 4px rgba(20, 142, 69, 0.2)',
-      },
-      borderRadius: {
-        lg: '0.875rem',
-        xl: '1.125rem',
-        '2xl': '1.5rem',
-      },
-      spacing: {
-        18: '4.5rem',
-      },
-    },
-  },
-  plugins: [],
-};
-
-export default config;
