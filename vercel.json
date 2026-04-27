@@ -3,10 +3,10 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": "client/dist",
-  "framework": "vite",
+  "framework": null,
   "functions": {
     "server/src/index.ts": {
-      "runtime": "nodejs22.x",
+      "runtime": "nodejs20.x",
       "maxDuration": 30
     }
   },
