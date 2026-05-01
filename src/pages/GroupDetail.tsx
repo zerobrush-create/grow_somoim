@@ -11,6 +11,7 @@ import { useGroup } from "@/hooks/useGroups";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { ReportDialog } from "@/components/ReportDialog";
 
 type Tab = "intro" | "events" | "board" | "photos" | "notices" | "reviews";
 
@@ -205,7 +206,10 @@ const GroupDetail = () => {
 
         <div className="px-4 pt-5">
           <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{group.category}</Badge>
-          <h1 className="text-2xl font-bold mt-2">{group.name}</h1>
+          <div className="flex items-start justify-between gap-2 mt-2">
+            <h1 className="text-2xl font-bold">{group.name}</h1>
+            {user && !isOwner && <ReportDialog targetType="group" targetId={group.id} />}
+          </div>
           <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
             {group.location && (
               <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {group.location}</span>
