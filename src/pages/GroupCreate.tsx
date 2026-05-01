@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, ImagePlus, X, Lock } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["운동", "스터디", "취미", "맛집", "여행", "음악", "반려동물"];
+const MAX_TAGS = 5;
+const MAX_IMAGE_MB = 5;
 
 const groupSchema = z.object({
   name: z
@@ -52,6 +55,11 @@ const GroupCreate = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [maxMembers, setMaxMembers] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<keyof FieldErrors, boolean>>({
     name: false,
     category: false,
@@ -76,6 +84,48 @@ const GroupCreate = () => {
     const digitsOnly = e.target.value.replace(/[^0-9]/g, "");
     setMaxMembers(digitsOnly);
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "이미지 파일만 업로드할 수 있어요", variant: "destructive" });
+      return;
+    }
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      toast({ title: `이미지는 ${MAX_IMAGE_MB}MB 이하만 가능해요`, variant: "destructive" });
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const addTag = () => {
+    const t = tagInput.trim().replace(/^#/, "");
+    if (!t) return;
+    if (t.length > 12) {
+      toast({ title: "태그는 12자 이하여야 해요", variant: "destructive" });
+      return;
+    }
+    if (tags.includes(t)) {
+      setTagInput("");
+      return;
+    }
+    if (tags.length >= MAX_TAGS) {
+      toast({ title: `태그는 최대 ${MAX_TAGS}개까지 추가할 수 있어요`, variant: "destructive" });
+      return;
+    }
+    setTags([...tags, t]);
+    setTagInput("");
+  };
+
+  const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   const validation = useMemo(() => {
     const result = groupSchema.safeParse({
@@ -111,6 +161,19 @@ const GroupCreate = () => {
       }
       const v = validation.data;
 
+      // 이미지 업로드 (선택)
+      let imageUrl: string | null = null;
+      if (imageFile) {
+        const ext = imageFile.name.split(".").pop() || "jpg";
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("group-images")
+          .upload(path, imageFile, { cacheControl: "3600", upsert: false });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("group-images").getPublicUrl(path);
+        imageUrl = pub.publicUrl;
+      }
+
       const { data, error } = await supabase
         .from("groups")
         .insert({
@@ -121,6 +184,9 @@ const GroupCreate = () => {
           max_members: typeof v.maxMembers === "number" ? v.maxMembers : null,
           owner_id: user.id,
           status: "active",
+          is_private: isPrivate,
+          tags: tags.length > 0 ? tags : null,
+          image_url: imageUrl,
         })
         .select("id")
         .single();
@@ -137,10 +203,10 @@ const GroupCreate = () => {
 
       return data.id as string;
     },
-    onSuccess: (id) => {
+    onSuccess: () => {
       toast({ title: "모임이 생성되었어요" });
       qc.invalidateQueries({ queryKey: ["groups"] });
-      navigate(`/groups/${id}`);
+      navigate("/groups");
     },
     onError: (e: Error) =>
       toast({ title: "생성 실패", description: e.message, variant: "destructive" }),
@@ -199,6 +265,35 @@ const GroupCreate = () => {
               aria-invalid={!!showError("name")}
             />
             {showError("name") && <p className="text-sm text-destructive">{showError("name")}</p>}
+          </div>
+
+          {/* 커버 이미지 */}
+          <div className="space-y-2">
+            <Label>커버 이미지 (선택)</Label>
+            {imagePreview ? (
+              <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
+                <img src={imagePreview} alt="커버 미리보기" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/90 flex items-center justify-center shadow"
+                  aria-label="이미지 제거"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-border hover:bg-muted/50 cursor-pointer transition-smooth">
+                <ImagePlus className="h-6 w-6 text-muted-foreground mb-1" />
+                <span className="text-sm text-muted-foreground">이미지 추가 (최대 {MAX_IMAGE_MB}MB)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
           <div ref={fieldRefs.category} className="space-y-2 scroll-mt-20">
@@ -266,6 +361,63 @@ const GroupCreate = () => {
               aria-invalid={!!showError("maxMembers")}
             />
             {showError("maxMembers") && <p className="text-sm text-destructive">{showError("maxMembers")}</p>}
+          </div>
+
+          {/* 태그 */}
+          <div className="space-y-2">
+            <Label htmlFor="tag">태그 (선택, 최대 {MAX_TAGS}개)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="tag"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addTag();
+                  }
+                }}
+                placeholder="예: 독서, 등산"
+                maxLength={12}
+              />
+              <Button type="button" variant="secondary" onClick={addTag} disabled={!tagInput.trim()}>
+                추가
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm"
+                  >
+                    #{t}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      className="hover:text-destructive"
+                      aria-label={`${t} 제거`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 비공개 토글 */}
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="private" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                비공개 모임
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                승인된 멤버만 모임 내용을 볼 수 있어요
+              </p>
+            </div>
+            <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
           </div>
 
           <div ref={fieldRefs.description} className="space-y-2 scroll-mt-20">
