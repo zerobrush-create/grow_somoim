@@ -36,6 +36,7 @@ import Stores from "./pages/Stores.tsx";
 import Bookmarks from "./pages/Bookmarks.tsx";
 import PublicProfile from "./pages/PublicProfile.tsx";
 import FollowList from "./pages/FollowList.tsx";
+import Recommendations from "./pages/Recommendations.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
           <Route path="/users/:id" element={<PublicProfile />} />
           <Route path="/users/:id/follows" element={<FollowList />} />
           <Route path="/follows" element={<ProtectedRoute><FollowList /></ProtectedRoute>} />
+          <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
           <Route path="/leaders" element={<LeaderBoard />} />
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />

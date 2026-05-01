@@ -78,6 +78,7 @@ const Home = () => {
   const quickMenu = [
     { to: "/points", label: "포인트", icon: Coins, color: "bg-amber-100 text-amber-700" },
     { to: "/stores", label: "가맹점", icon: Store, color: "bg-emerald-100 text-emerald-700" },
+    { to: "/recommendations", label: "추천", icon: Sparkles, color: "bg-pink-100 text-pink-700" },
     { to: "/ads", label: "광고신청", icon: Megaphone, color: "bg-rose-100 text-rose-700" },
     { to: "/leaders", label: "리더", icon: Crown, color: "bg-purple-100 text-purple-700" },
     { to: "/instructor/apply", label: "강사신청", icon: GraduationCap, color: "bg-sky-100 text-sky-700" },

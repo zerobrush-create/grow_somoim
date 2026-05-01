@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Users } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Plus, Users, List, CalendarDays } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type EventRow = {
   id: string;
@@ -35,6 +36,8 @@ const GroupEvents = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
 
   const [title, setTitle] = useState("");
   const [startsAt, setStartsAt] = useState("");
@@ -111,6 +114,23 @@ const GroupEvents = () => {
   const isAttending = (eid: string) =>
     !!user && (attendees ?? []).some((a) => a.event_id === eid && a.user_id === user.id);
 
+  // Calendar grid helpers
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: Array<{ day: number | null; events: EventRow[] }> = [];
+  for (let i = 0; i < firstDow; i++) cells.push({ day: null, events: [] });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayEvents = (events ?? []).filter((e) => {
+      const dt = new Date(e.starts_at);
+      return dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === d;
+    });
+    cells.push({ day: d, events: dayEvents });
+  }
+  const todayD = new Date();
+  const isToday = (d: number) => todayD.getFullYear() === year && todayD.getMonth() === month && todayD.getDate() === d;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-20">
@@ -119,6 +139,10 @@ const GroupEvents = () => {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-lg font-bold flex-1">모임 일정</h1>
+          <div className="flex bg-muted rounded-full p-0.5">
+            <button onClick={() => setView("list")} className={cn("p-1.5 rounded-full", view === "list" && "bg-background shadow-sm")} aria-label="목록"><List className="h-4 w-4" /></button>
+            <button onClick={() => setView("calendar")} className={cn("p-1.5 rounded-full", view === "calendar" && "bg-background shadow-sm")} aria-label="캘린더"><CalendarDays className="h-4 w-4" /></button>
+          </div>
           {user && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
@@ -165,6 +189,33 @@ const GroupEvents = () => {
           )}
         </header>
 
+        {view === "calendar" && (
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="px-2 py-1 rounded hover:bg-muted text-sm">‹</button>
+              <p className="font-bold">{year}년 {month + 1}월</p>
+              <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="px-2 py-1 rounded hover:bg-muted text-sm">›</button>
+            </div>
+            <div className="grid grid-cols-7 text-center text-[10px] text-muted-foreground mb-1">
+              {["일", "월", "화", "수", "목", "금", "토"].map((d) => <div key={d}>{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((c, i) => (
+                <div key={i} className={cn("aspect-square rounded-lg border border-border p-1 text-[10px] flex flex-col", c.day && isToday(c.day) && "bg-primary-soft border-primary")}>
+                  {c.day && <span className="font-semibold">{c.day}</span>}
+                  <div className="flex-1 overflow-hidden space-y-0.5 mt-0.5">
+                    {c.events.slice(0, 2).map((e) => (
+                      <div key={e.id} className="bg-primary/15 text-primary truncate rounded px-1 leading-tight">{e.title}</div>
+                    ))}
+                    {c.events.length > 2 && <div className="text-muted-foreground">+{c.events.length - 2}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === "list" && (
         <div className="px-4 py-4 space-y-3">
           {isLoading ? (
             <Skeleton className="h-24 w-full rounded-xl" />
@@ -178,7 +229,7 @@ const GroupEvents = () => {
                   <h3 className="font-bold">{ev.title}</h3>
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
+                      <CalendarIcon className="h-3.5 w-3.5" />
                       {new Date(ev.starts_at).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}
                     </span>
                     {ev.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{ev.location}</span>}
@@ -206,6 +257,7 @@ const GroupEvents = () => {
             <div className="text-center py-16 text-sm text-muted-foreground">아직 일정이 없어요</div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,13 @@
+{
+  "name": "GROW · 함께 성장하는 소모임",
+  "short_name": "GROW",
+  "description": "취향이 맞는 사람들과 함께하는 소모임과 클래스",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f8d4c",
+  "lang": "ko",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64 32x32 24x24 16x16", "type": "image/x-icon" }
+  ]
+}
