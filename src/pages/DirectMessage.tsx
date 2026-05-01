@@ -60,6 +60,16 @@ const DirectMessage = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!user || !peerId || !messages || messages.length === 0) return;
+    const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).map((m) => m.id);
+    if (unread.length === 0) return;
+    supabase.from("direct_messages").update({ is_read: true }).in("id", unread).then(() => {
+      qc.invalidateQueries({ queryKey: ["dm-threads", user.id] });
+      qc.invalidateQueries({ queryKey: ["unread-notif", user.id] });
+    });
+  }, [messages, user, peerId, qc]);
+
   const send = useMutation({
     mutationFn: async () => {
       if (!user || !peerId) throw new Error("로그인이 필요합니다");

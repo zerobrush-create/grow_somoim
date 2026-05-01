@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle, Heart } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +55,25 @@ const ClassDetail = () => {
     queryFn: async () => (await supabase.from("class_reviews").select("*").eq("class_id", idNum).order("created_at", { ascending: false })).data ?? [],
   });
 
+  const { data: bookmark } = useQuery({
+    queryKey: ["bookmark-class", idNum, user?.id],
+    enabled: !!idNum && !!user,
+    queryFn: async () => (await supabase.from("bookmarks").select("id").eq("user_id", user!.id).eq("target_type", "class").eq("target_id", String(idNum)).maybeSingle()).data,
+  });
+  const toggleBookmark = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("로그인이 필요합니다");
+      if (bookmark) {
+        const { error } = await supabase.from("bookmarks").delete().eq("id", bookmark.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bookmarks").insert({ user_id: user.id, target_type: "class", target_id: String(idNum) });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmark-class", idNum, user?.id] }),
+  });
+
   const isInstructor = !!user && cls?.instructor_id === user.id;
   const enrolled = !!enrollment;
   const avgRating = reviews && reviews.length > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "0.0";
@@ -107,6 +126,9 @@ const ClassDetail = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
           <button onClick={() => navigate(-1)} className="absolute top-3 left-3 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
+          </button>
+          <button onClick={() => user ? toggleBookmark.mutate() : navigate("/login")} className="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="찜">
+            <Heart className={cn("h-5 w-5", bookmark && "fill-accent text-accent")} />
           </button>
         </div>
 
