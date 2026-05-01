@@ -4,6 +4,17 @@ import yoga from "@/assets/group-yoga.jpg";
 import photo from "@/assets/group-photo.jpg";
 import pottery from "@/assets/class-pottery.jpg";
 import cooking from "@/assets/class-cooking.jpg";
+import {
+  Sparkles,
+  Dumbbell,
+  BookOpen,
+  Palette,
+  UtensilsCrossed,
+  Plane,
+  Music,
+  PawPrint,
+  type LucideIcon,
+} from "lucide-react";
 
 export type Group = {
   id: string;
@@ -40,15 +51,22 @@ export type ChatItem = {
 };
 
 export const categories = [
-  { id: "all", label: "전체", emoji: "✨" },
-  { id: "exercise", label: "운동", emoji: "🏃" },
-  { id: "study", label: "스터디", emoji: "📚" },
-  { id: "hobby", label: "취미", emoji: "🎨" },
-  { id: "food", label: "맛집", emoji: "🍱" },
-  { id: "travel", label: "여행", emoji: "✈️" },
-  { id: "music", label: "음악", emoji: "🎵" },
-  { id: "pet", label: "반려동물", emoji: "🐾" },
-];
+  { id: "all",      label: "전체",     emoji: "✨", icon: Sparkles,         bg: "bg-[hsl(145_60%_94%)]", fg: "text-[hsl(145_75%_32%)]" },
+  { id: "exercise", label: "운동",     emoji: "🏃", icon: Dumbbell,         bg: "bg-[hsl(14_90%_94%)]",  fg: "text-[hsl(14_75%_45%)]"  },
+  { id: "study",    label: "스터디",   emoji: "📚", icon: BookOpen,         bg: "bg-[hsl(210_90%_94%)]", fg: "text-[hsl(210_75%_42%)]" },
+  { id: "hobby",    label: "취미",     emoji: "🎨", icon: Palette,          bg: "bg-[hsl(280_70%_95%)]", fg: "text-[hsl(280_55%_48%)]" },
+  { id: "food",     label: "맛집",     emoji: "🍱", icon: UtensilsCrossed,  bg: "bg-[hsl(32_95%_92%)]",  fg: "text-[hsl(24_80%_42%)]"  },
+  { id: "travel",   label: "여행",     emoji: "✈️", icon: Plane,            bg: "bg-[hsl(190_75%_92%)]", fg: "text-[hsl(195_70%_38%)]" },
+  { id: "music",    label: "음악",     emoji: "🎵", icon: Music,            bg: "bg-[hsl(340_80%_95%)]", fg: "text-[hsl(340_65%_50%)]" },
+  { id: "pet",      label: "반려동물", emoji: "🐾", icon: PawPrint,         bg: "bg-[hsl(40_85%_90%)]",  fg: "text-[hsl(35_70%_38%)]"  },
+] satisfies ReadonlyArray<{
+  id: string;
+  label: string;
+  emoji: string;
+  icon: LucideIcon;
+  bg: string;
+  fg: string;
+}>;
 
 export const groups: Group[] = [
   {
