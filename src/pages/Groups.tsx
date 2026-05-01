@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, MapPin, Users, Plus, X } from "lucide-react";
+import { Search, MapPin, Users, Plus, X, Star, History } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
@@ -8,14 +8,51 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useGroups, mapCategoryFilter } from "@/hooks/useGroups";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "온라인"];
+type SortKey = "recent" | "popular" | "rating";
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: "recent", label: "최신순" },
+  { id: "popular", label: "인기순" },
+  { id: "rating", label: "평점순" },
+];
 
 const Groups = () => {
   const [active, setActive] = useState("all");
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("전체");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [showHistory, setShowHistory] = useState(false);
   const { data: groups, isLoading, error } = useGroups();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const { data: history } = useQuery({
+    queryKey: ["search-history", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.from("search_history").select("id,query,created_at").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(8)).data ?? [],
+  });
+
+  const saveQuery = useMutation({
+    mutationFn: async (q: string) => {
+      if (!user || !q.trim()) return;
+      await supabase.from("search_history").insert({ user_id: user.id, query: q.trim() });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["search-history", user?.id] }),
+  });
+  const removeHistory = useMutation({
+    mutationFn: async (id: number) => { await supabase.from("search_history").delete().eq("id", id); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["search-history", user?.id] }),
+  });
+
+  const onSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) saveQuery.mutate(query);
+    setShowHistory(false);
+  };
 
   const filtered = (groups ?? []).filter((g) => {
     if (active !== "all" && g.category !== mapCategoryFilter(active)) return false;
@@ -26,6 +63,10 @@ const Groups = () => {
       if (!hay.includes(q)) return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (sort === "popular") return b.members - a.members;
+    if (sort === "rating") return b.rating - a.rating;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   return (
@@ -41,19 +82,44 @@ const Groups = () => {
             <Plus className="h-5 w-5" />
           </Link>
         </div>
-        <div className="relative mb-3">
+        <form onSubmit={onSearchSubmit} className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setShowHistory(true)}
+            onBlur={() => setTimeout(() => setShowHistory(false), 150)}
             placeholder="모임 이름·설명·지역으로 검색"
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
-            <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
+            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
               <X className="h-4 w-4" />
             </button>
           )}
+          {showHistory && history && history.length > 0 && (
+            <div className="absolute z-40 left-0 right-0 top-12 bg-card rounded-2xl border border-border shadow-card p-2 space-y-1">
+              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />최근 검색</p>
+              {history.map((h) => (
+                <div key={h.id} className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-lg">
+                  <button type="button" onMouseDown={() => { setQuery(h.query); setShowHistory(false); }} className="flex-1 text-left text-sm truncate">{h.query}</button>
+                  <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label="삭제"><X className="h-3 w-3" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </form>
+        <div className="flex gap-2 mb-2">
+          {SORTS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSort(s.id)}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-smooth",
+                sort === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >{s.label}</button>
+          ))}
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 mb-2">
           {LOCATIONS.map((l) => (
@@ -146,6 +212,12 @@ const Groups = () => {
                   <span className="flex items-center gap-0.5">
                     <Users className="h-3 w-3" /> {g.members}명
                   </span>
+                  {g.reviewCount > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      <Star className="h-3 w-3 fill-accent text-accent" /> {g.rating}
+                      <span className="text-muted-foreground/70">({g.reviewCount})</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
