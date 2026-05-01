@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { MentionInput } from "@/components/MentionInput";
 
 type Post = {
   id: number;
@@ -216,7 +217,7 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
         </div>
         {canComment && (
           <form onSubmit={(e) => { e.preventDefault(); addComment.mutate(); }} className="flex gap-2 pt-2">
-            <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="댓글 작성..." maxLength={500} />
+            <div className="flex-1"><MentionInput value={text} onChange={setText} placeholder="댓글 작성... @로 멘션" maxLength={500} /></div>
             <Button type="submit" disabled={addComment.isPending || !text.trim()}>등록</Button>
           </form>
         )}
