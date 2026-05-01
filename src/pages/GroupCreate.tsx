@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +48,7 @@ const GroupCreate = () => {
   const qc = useQueryClient();
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("취미");
+  const [category, setCategory] = useState<string>("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [maxMembers, setMaxMembers] = useState("");
@@ -60,6 +60,22 @@ const GroupCreate = () => {
     description: false,
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  // 에러 자동 스크롤용 ref
+  const fieldRefs: Record<keyof FieldErrors, React.RefObject<HTMLDivElement>> = {
+    name: useRef<HTMLDivElement>(null),
+    category: useRef<HTMLDivElement>(null),
+    location: useRef<HTMLDivElement>(null),
+    maxMembers: useRef<HTMLDivElement>(null),
+    description: useRef<HTMLDivElement>(null),
+  };
+  const FIELD_ORDER: (keyof FieldErrors)[] = ["name", "category", "location", "maxMembers", "description"];
+
+  // 정원 입력 마스킹: 숫자만 허용
+  const handleMaxMembersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digitsOnly = e.target.value.replace(/[^0-9]/g, "");
+    setMaxMembers(digitsOnly);
+  };
 
   const validation = useMemo(() => {
     const result = groupSchema.safeParse({
@@ -153,12 +169,24 @@ const GroupCreate = () => {
           onSubmit={(e) => {
             e.preventDefault();
             setSubmitAttempted(true);
-            if (!validation.success) return;
+            if (!validation.success) {
+              // 첫 에러 필드로 자동 스크롤 + 포커스
+              const firstErrorField = FIELD_ORDER.find((f) => validation.fieldErrors[f]);
+              if (firstErrorField) {
+                const el = fieldRefs[firstErrorField].current;
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  const focusable = el.querySelector<HTMLElement>("input, textarea, button");
+                  setTimeout(() => focusable?.focus(), 300);
+                }
+              }
+              return;
+            }
             create.mutate();
           }}
           className="px-4 pt-4 space-y-5"
         >
-          <div className="space-y-2">
+          <div ref={fieldRefs.name} className="space-y-2 scroll-mt-20">
             <Label htmlFor="name">모임 이름 *</Label>
             <Input
               id="name"
@@ -173,8 +201,17 @@ const GroupCreate = () => {
             {showError("name") && <p className="text-sm text-destructive">{showError("name")}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label>카테고리</Label>
+          <div ref={fieldRefs.category} className="space-y-2 scroll-mt-20">
+            <div className="flex items-center justify-between">
+              <Label>카테고리 *</Label>
+              {category ? (
+                <span className="text-xs text-primary inline-flex items-center gap-1">
+                  <Check className="h-3 w-3" /> 선택됨
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">하나를 선택해 주세요</span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((c) => (
                 <button
@@ -187,9 +224,11 @@ const GroupCreate = () => {
                   className={cn(
                     "px-3 py-1.5 rounded-full text-sm font-medium transition-smooth",
                     category === c
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground hover:bg-secondary"
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                      : "bg-muted text-foreground hover:bg-secondary",
+                    !category && (touched.category || submitAttempted) && "ring-1 ring-destructive/40"
                   )}
+                  aria-pressed={category === c}
                 >
                   {c}
                 </button>
@@ -198,7 +237,7 @@ const GroupCreate = () => {
             {showError("category") && <p className="text-sm text-destructive">{showError("category")}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div ref={fieldRefs.location} className="space-y-2 scroll-mt-20">
             <Label htmlFor="location">활동 지역</Label>
             <Input
               id="location"
@@ -212,23 +251,24 @@ const GroupCreate = () => {
             {showError("location") && <p className="text-sm text-destructive">{showError("location")}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div ref={fieldRefs.maxMembers} className="space-y-2 scroll-mt-20">
             <Label htmlFor="max">정원 (선택)</Label>
             <Input
               id="max"
-              type="number"
-              min={2}
-              max={1000}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
               value={maxMembers}
-              onChange={(e) => setMaxMembers(e.target.value)}
+              onChange={handleMaxMembersChange}
               onBlur={() => markTouched("maxMembers")}
-              placeholder="제한 없음"
+              placeholder="제한 없음 (숫자만 입력)"
               aria-invalid={!!showError("maxMembers")}
             />
             {showError("maxMembers") && <p className="text-sm text-destructive">{showError("maxMembers")}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div ref={fieldRefs.description} className="space-y-2 scroll-mt-20">
             <Label htmlFor="desc">소개</Label>
             <Textarea
               id="desc"
