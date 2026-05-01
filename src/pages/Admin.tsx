@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -65,6 +66,62 @@ const Admin = () => {
       return { users: u.count ?? 0, groups: g.count ?? 0, classes: c.count ?? 0, dms: dm.count ?? 0 };
     },
   });
+
+  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
+  const sinceIso = useMemo(
+    () => new Date(Date.now() - rangeDays * 86400000).toISOString(),
+    [rangeDays],
+  );
+
+  const { data: trend } = useQuery({
+    queryKey: ["admin-trend", rangeDays],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const [users, groups, reports] = await Promise.all([
+        supabase.from("profiles").select("created_at").gte("created_at", sinceIso).limit(5000),
+        supabase.from("groups").select("created_at").gte("created_at", sinceIso).limit(5000),
+        supabase.from("reports").select("created_at").gte("created_at", sinceIso).limit(5000),
+      ]);
+      const buckets: Record<string, { date: string; users: number; groups: number; reports: number }> = {};
+      for (let i = rangeDays - 1; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+        buckets[d] = { date: d.slice(5), users: 0, groups: 0, reports: 0 };
+      }
+      const bump = (rows: { created_at: string }[] | null, key: "users" | "groups" | "reports") => {
+        (rows ?? []).forEach((r) => {
+          const d = r.created_at.slice(0, 10);
+          if (buckets[d]) buckets[d][key] += 1;
+        });
+      };
+      bump(users.data as any, "users");
+      bump(groups.data as any, "groups");
+      bump(reports.data as any, "reports");
+      return Object.values(buckets);
+    },
+  });
+
+  const exportCsv = (rows: Record<string, unknown>[], filename: string) => {
+    if (!rows.length) {
+      toast({ title: "내보낼 데이터가 없어요", variant: "destructive" });
+      return;
+    }
+    const headers = Object.keys(rows[0]);
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv = [
+      headers.join(","),
+      ...rows.map((r) => headers.map((h) => escape(r[h])).join(",")),
+    ].join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const updateReport = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -179,6 +236,69 @@ const Admin = () => {
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             ))}
+            <div className="col-span-2 bg-card rounded-2xl p-3 border border-border mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-primary" />가입·모임·신고 추이
+                </h3>
+                <div className="flex gap-1">
+                  {([7, 30, 90] as const).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setRangeDays(d)}
+                      className={`text-[11px] px-2 py-1 rounded-md ${rangeDays === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                    >{d}일</button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trend ?? []} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="g-users" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="g-groups" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                    <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#g-users)" name="가입" />
+                    <Area type="monotone" dataKey="groups" stroke="hsl(var(--accent))" fill="url(#g-groups)" name="모임" />
+                    <Area type="monotone" dataKey="reports" stroke="hsl(var(--destructive))" fill="transparent" name="신고" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="col-span-2 bg-card rounded-2xl p-3 border border-border">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Download className="h-4 w-4 text-primary" />CSV 내보내기
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const { data } = await supabase.from("profiles").select("id,email,name,nickname,location,created_at").gte("created_at", sinceIso).limit(5000);
+                  exportCsv(data ?? [], `users_${rangeDays}d.csv`);
+                }}>사용자</Button>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const { data } = await supabase.from("groups").select("id,name,category,location,owner_id,created_at").gte("created_at", sinceIso).limit(5000);
+                  exportCsv(data ?? [], `groups_${rangeDays}d.csv`);
+                }}>모임</Button>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const { data } = await supabase.from("reports").select("id,reporter_id,target_type,target_id,reason,status,created_at").gte("created_at", sinceIso).limit(5000);
+                  exportCsv(data ?? [], `reports_${rangeDays}d.csv`);
+                }}>신고</Button>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const { data } = await supabase.from("classes").select("id,title,category,instructor_id,price,status,created_at").gte("created_at", sinceIso).limit(5000);
+                  exportCsv(data ?? [], `classes_${rangeDays}d.csv`);
+                }}>클래스</Button>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-2 mt-4">
