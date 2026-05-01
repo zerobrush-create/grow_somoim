@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Plus, BookOpen, Search, X } from "lucide-react";
+import { MapPin, Plus, BookOpen, Search, X, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,20 @@ const Classes = () => {
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const { data: reviewAgg } = useQuery({
+    queryKey: ["classes-review-agg"],
+    queryFn: async () => {
+      const { data } = await supabase.from("class_reviews").select("class_id,rating");
+      const map: Record<number, { sum: number; count: number }> = {};
+      (data ?? []).forEach((r) => {
+        const k = r.class_id as number;
+        map[k] = map[k] || { sum: 0, count: 0 };
+        map[k].sum += r.rating; map[k].count += 1;
+      });
+      return map;
     },
   });
 
@@ -98,6 +112,13 @@ const Classes = () => {
               <div className="p-3">
                 {c.category && <p className="text-[10px] font-semibold text-primary">{c.category}</p>}
                 <p className="text-sm font-bold mt-0.5 line-clamp-2 leading-tight min-h-[2.5rem]">{c.title}</p>
+                {reviewAgg?.[c.id] && (
+                  <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-0.5">
+                    <Star className="h-3 w-3 fill-accent text-accent" />
+                    <span className="font-semibold text-foreground">{(reviewAgg[c.id].sum / reviewAgg[c.id].count).toFixed(1)}</span>
+                    <span>({reviewAgg[c.id].count})</span>
+                  </p>
+                )}
                 {c.location && (
                   <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-0.5">
                     <MapPin className="h-3 w-3" /> {c.location}

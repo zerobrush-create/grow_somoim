@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, MapPin, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar } from "lucide-react";
+import { ArrowLeft, Share2, Heart, MapPin, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useGroup } from "@/hooks/useGroups";
@@ -11,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
-type Tab = "intro" | "events" | "board" | "photos" | "notices";
+type Tab = "intro" | "events" | "board" | "photos" | "notices" | "reviews";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "intro", label: "소개" },
@@ -19,6 +20,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "board", label: "게시판" },
   { id: "photos", label: "사진첩" },
   { id: "notices", label: "공지" },
+  { id: "reviews", label: "후기" },
 ];
 
 const GroupDetail = () => {
@@ -29,6 +31,8 @@ const GroupDetail = () => {
   const { data: group, isLoading } = useGroup(id);
   const [liked, setLiked] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
+  const [reviewText, setReviewText] = useState("");
+  const [rating, setRating] = useState(5);
 
   const { data: myMembership } = useQuery({
     queryKey: ["membership", id, user?.id],
@@ -42,6 +46,24 @@ const GroupDetail = () => {
         .maybeSingle();
       return data;
     },
+  });
+
+  const { data: reviews } = useQuery({
+    queryKey: ["group-reviews", id],
+    enabled: !!id,
+    queryFn: async () => (await supabase.from("group_reviews").select("*").eq("group_id", id!).order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const addReview = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("로그인이 필요합니다");
+      if (!reviewText.trim()) throw new Error("후기를 입력해주세요");
+      const { error } = await supabase.from("group_reviews").insert({ group_id: id!, author_id: user.id, rating, content: reviewText.trim() });
+      if (error) throw error;
+      setReviewText("");
+    },
+    onSuccess: () => { toast({ title: "후기가 등록되었어요" }); qc.invalidateQueries({ queryKey: ["group-reviews", id] }); },
+    onError: (e: Error) => toast({ title: "등록 실패", description: e.message, variant: "destructive" }),
   });
 
   const join = useMutation({
@@ -239,6 +261,34 @@ const GroupDetail = () => {
               <Bell className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
               <p className="text-sm text-muted-foreground mb-4">중요한 공지사항을 확인해 보세요</p>
               <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/announcements`)}>공지 보기</Button>
+            </div>
+          )}
+          {activeTab === "reviews" && (
+            <div className="px-4 py-5 space-y-4">
+              {user && (isMember || isOwner) && (
+                <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map((s) => (
+                      <button key={s} onClick={() => setRating(s)} aria-label={`${s}점`}>
+                        <Star className={cn("h-5 w-5", s <= rating ? "fill-accent text-accent" : "text-muted")} />
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea rows={3} placeholder="모임 후기를 남겨주세요" value={reviewText} onChange={(e) => setReviewText(e.target.value)} maxLength={1000} />
+                  <Button onClick={() => addReview.mutate()} disabled={addReview.isPending} className="w-full">{addReview.isPending ? "등록 중..." : "후기 등록"}</Button>
+                </div>
+              )}
+              {reviews && reviews.length > 0 ? reviews.map((r) => (
+                <div key={r.id} className="border-b border-border pb-3">
+                  <div className="flex items-center gap-1 mb-1">
+                    {[1,2,3,4,5].map((s) => <Star key={s} className={cn("h-3.5 w-3.5", s <= r.rating ? "fill-accent text-accent" : "text-muted")} />)}
+                  </div>
+                  <p className="text-sm">{r.content}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{new Date(r.created_at).toLocaleDateString("ko-KR")}</p>
+                </div>
+              )) : (
+                <div className="text-center py-12 text-sm text-muted-foreground">아직 후기가 없어요</div>
+              )}
             </div>
           )}
         </div>
