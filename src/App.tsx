@@ -34,6 +34,8 @@ import ClassBoard from "./pages/ClassBoard.tsx";
 import AdRequest from "./pages/AdRequest.tsx";
 import Stores from "./pages/Stores.tsx";
 import Bookmarks from "./pages/Bookmarks.tsx";
+import PublicProfile from "./pages/PublicProfile.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -64,16 +66,17 @@ const App = () => (
           <Route path="/chat" element={<Chat />} />
           <Route path="/dm/:peerId" element={<DirectMessage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/edit" element={<ProfileEdit />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/points" element={<Points />} />
-          <Route path="/instructor/apply" element={<InstructorApply />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/profile/edit" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/points" element={<ProtectedRoute><Points /></ProtectedRoute>} />
+          <Route path="/instructor/apply" element={<ProtectedRoute><InstructorApply /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requireRole="admin"><Admin /></ProtectedRoute>} />
+          <Route path="/users/:id" element={<PublicProfile />} />
           <Route path="/leaders" element={<LeaderBoard />} />
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />
-          <Route path="/bookmarks" element={<Bookmarks />} />
+          <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
