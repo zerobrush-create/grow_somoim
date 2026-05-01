@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, MapPin, Users, MessageCircle, Image, Bell } from "lucide-react";
+import { ArrowLeft, Share2, Heart, MapPin, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -107,6 +107,9 @@ const GroupDetail = () => {
     ? "신청 거절됨"
     : "가입 신청하기";
 
+  const isOwner = !!user && group.owner_id === user.id;
+  const isMember = myMembership?.status === "approved";
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md bg-background relative pb-28">
@@ -126,6 +129,24 @@ const GroupDetail = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex gap-2">
+              {isOwner && (
+                <>
+                  <button
+                    onClick={() => navigate(`/groups/${group.id}/requests`)}
+                    className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center"
+                    aria-label="가입 신청 관리"
+                  >
+                    <UserCheck className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => navigate(`/groups/${group.id}/edit`)}
+                    className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center"
+                    aria-label="모임 설정"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setLiked(!liked)}
                 className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center"
@@ -193,7 +214,11 @@ const GroupDetail = () => {
             </section>
           )}
           {activeTab === "events" && (
-            <div className="text-center py-16 text-muted-foreground text-sm">아직 이벤트가 없어요</div>
+            <div className="px-4 py-6 text-center">
+              <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">모임 일정을 확인하고 참석을 신청해 보세요</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>일정 보기</Button>
+            </div>
           )}
           {activeTab === "board" && (
             <div className="text-center py-16 text-muted-foreground text-sm">아직 게시글이 없어요</div>
@@ -215,22 +240,32 @@ const GroupDetail = () => {
 
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
         <div className="flex items-center gap-2 p-3">
-          <Link
-            to="/chat"
-            className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-foreground hover:bg-secondary transition-smooth"
-            aria-label="문의"
-          >
-            <MessageCircle className="h-5 w-5" />
-          </Link>
+          {(isMember || isOwner) ? (
+            <Link
+              to={`/groups/${group.id}/chat`}
+              className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-foreground hover:bg-secondary transition-smooth"
+              aria-label="모임 채팅"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+          ) : (
+            <Link
+              to="/chat"
+              className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-foreground hover:bg-secondary transition-smooth"
+              aria-label="문의"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+          )}
           <Button
             onClick={handleJoin}
-            disabled={join.isPending || !!myMembership}
+            disabled={join.isPending || !!myMembership || isOwner}
             className={cn(
               "flex-1 h-12 rounded-xl text-base font-bold border-0 hover:opacity-95",
-              myMembership ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
+              (myMembership || isOwner) ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
             )}
           >
-            {join.isPending ? "신청 중..." : ctaLabel}
+            {join.isPending ? "신청 중..." : isOwner ? "✓ 내 모임" : ctaLabel}
           </Button>
         </div>
       </div>
