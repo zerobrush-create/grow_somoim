@@ -11,6 +11,7 @@ import { useGroup } from "@/hooks/useGroups";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { ReportDialog } from "@/components/ReportDialog";
 
 type Tab = "intro" | "events" | "board" | "photos" | "notices" | "reviews";
 
