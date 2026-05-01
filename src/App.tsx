@@ -33,6 +33,7 @@ import LeaderBoard from "./pages/LeaderBoard.tsx";
 import ClassBoard from "./pages/ClassBoard.tsx";
 import AdRequest from "./pages/AdRequest.tsx";
 import Stores from "./pages/Stores.tsx";
+import Bookmarks from "./pages/Bookmarks.tsx";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="/leaders" element={<LeaderBoard />} />
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />
+          <Route path="/bookmarks" element={<Bookmarks />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
