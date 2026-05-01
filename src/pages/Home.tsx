@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -29,6 +29,38 @@ const Home = () => {
     queryFn: async () => {
       const res = await supabase.from("groups").select("id,name,category,location,image_url,description").eq("status", "active").order("created_at", { ascending: false }).range(8, 12);
       return res.data ?? [];
+    },
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ["home-profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.from("profiles").select("interests,location").eq("id", user!.id).maybeSingle()).data,
+  });
+
+  const { data: forYou } = useQuery({
+    queryKey: ["home-for-you", user?.id, profile?.interests, profile?.location],
+    enabled: !!user && !!profile,
+    queryFn: async () => {
+      const interests = profile?.interests ?? [];
+      const loc = profile?.location ?? null;
+      let q = supabase.from("groups").select("id,name,category,location,image_url,description").eq("status", "active").limit(8);
+      if (interests.length > 0) q = q.in("category", interests as string[]);
+      else if (loc) q = q.ilike("location", `%${loc}%`);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  const { data: followingFeed } = useQuery({
+    queryKey: ["home-following-feed", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: f } = await supabase.from("follows").select("following_id").eq("follower_id", user!.id).limit(50);
+      const ids = (f ?? []).map((r) => r.following_id);
+      if (!ids.length) return [];
+      const { data: groups } = await supabase.from("groups").select("id,name,category,image_url,owner_id,created_at").in("owner_id", ids).eq("status", "active").order("created_at", { ascending: false }).limit(6);
+      return groups ?? [];
     },
   });
 
@@ -152,6 +184,51 @@ const Home = () => {
           {(!recommended || recommended.length === 0) && <p className="text-xs text-muted-foreground py-6">아직 모임이 없어요</p>}
         </div>
       </section>
+
+      {user && forYou && forYou.length > 0 && (
+        <section className="pt-7">
+          <div className="px-4 flex items-end justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-1.5"><Heart className="h-5 w-5 text-accent" />For You</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">관심사 기반 맞춤 추천</p>
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {forYou.map((g) => (
+              <Link key={g.id} to={`/groups/${g.id}`} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden shadow-soft hover:-translate-y-0.5 transition-smooth">
+                <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
+                  {g.image_url ? <img src={g.image_url} alt={g.name} loading="lazy" className="h-full w-full object-cover" /> : <Users className="h-8 w-8 text-muted-foreground/30" />}
+                </div>
+                <div className="p-3">
+                  <p className="text-[11px] text-primary font-semibold">{g.category}</p>
+                  <p className="text-sm font-bold line-clamp-1 mt-0.5">{g.name}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{g.location ?? ""}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {user && followingFeed && followingFeed.length > 0 && (
+        <section className="pt-7 px-4">
+          <h3 className="text-lg font-bold flex items-center gap-1.5 mb-3"><UserPlus className="h-5 w-5 text-primary" />팔로우 피드</h3>
+          <div className="space-y-2">
+            {followingFeed.map((g: any) => (
+              <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 bg-card rounded-2xl p-3 shadow-soft hover:shadow-card transition-smooth">
+                <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center">
+                  {g.image_url ? <img src={g.image_url} alt={g.name} className="h-full w-full object-cover" /> : <Users className="h-5 w-5 text-muted-foreground/30" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-primary font-semibold">{g.category}</p>
+                  <p className="text-sm font-bold truncate">{g.name}</p>
+                  <p className="text-[10px] text-muted-foreground">팔로잉이 새로 만든 모임</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="px-4 pt-7">
         <div className="flex items-end justify-between mb-3">
