@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Users, UserPlus } from "lucide-react";
+import { Sparkles, Users, UserPlus, Wand2 } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,21 @@ const Recommendations = () => {
     queryKey: ["rec-profile", user?.id],
     enabled: !!user,
     queryFn: async () => (await supabase.from("profiles").select("interests,location").eq("id", user!.id).maybeSingle()).data,
+  });
+
+  // AI-powered recommendations via edge function
+  const { data: aiRecs, isLoading: aiLoading, isError: aiError } = useQuery({
+    queryKey: ["ai-recs", user?.id],
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("ai-recommend", { body: {} });
+      if (error) throw error;
+      return (data?.recommendations ?? []) as Array<{
+        id: string; reason: string; score: number;
+        group: { id: string; name: string; category: string; location: string; description: string; tags: string[] };
+      }>;
+    },
   });
 
   // People you may know: most-followed users you don't already follow
@@ -78,6 +93,36 @@ const Recommendations = () => {
 
       {user && (
         <>
+          <section className="px-4 pt-5">
+            <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5">
+              <Wand2 className="h-4 w-4 text-accent" />AI 맞춤 추천
+            </h2>
+            {aiLoading ? (
+              <Skeleton className="h-24" />
+            ) : aiError ? (
+              <p className="text-xs text-muted-foreground py-4">AI 추천을 불러오지 못했어요</p>
+            ) : aiRecs && aiRecs.length > 0 ? (
+              <div className="space-y-2">
+                {aiRecs.map((r) => (
+                  <Link
+                    key={r.id}
+                    to={`/groups/${r.id}`}
+                    className="block bg-gradient-to-br from-primary-soft to-card rounded-2xl p-3 shadow-soft border border-primary/10"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-primary font-semibold">{r.group.category}</p>
+                      <span className="text-[10px] text-muted-foreground">매칭 {Math.round(r.score)}%</span>
+                    </div>
+                    <p className="text-sm font-bold mt-0.5">{r.group.name}</p>
+                    <p className="text-[11px] text-foreground/80 mt-1 leading-relaxed">💡 {r.reason}</p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground py-4">추천할 모임이 없어요</p>
+            )}
+          </section>
+
           <section className="px-4 pt-5">
             <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5"><UserPlus className="h-4 w-4 text-primary" />알 수도 있는 사람</h2>
             {peopleLoading ? <Skeleton className="h-20" /> : people && people.length > 0 ? (
