@@ -29,6 +29,10 @@ import Notifications from "./pages/Notifications.tsx";
 import Points from "./pages/Points.tsx";
 import InstructorApply from "./pages/InstructorApply.tsx";
 import Admin from "./pages/Admin.tsx";
+import LeaderBoard from "./pages/LeaderBoard.tsx";
+import ClassBoard from "./pages/ClassBoard.tsx";
+import AdRequest from "./pages/AdRequest.tsx";
+import Stores from "./pages/Stores.tsx";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +58,7 @@ const App = () => (
           <Route path="/classes" element={<Classes />} />
           <Route path="/classes/new" element={<ClassCreate />} />
           <Route path="/classes/:id/chat" element={<ClassChat />} />
+          <Route path="/classes/:id/board" element={<ClassBoard />} />
           <Route path="/classes/:id" element={<ClassDetail />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/dm/:peerId" element={<DirectMessage />} />
@@ -64,6 +69,9 @@ const App = () => (
           <Route path="/points" element={<Points />} />
           <Route path="/instructor/apply" element={<InstructorApply />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/leaders" element={<LeaderBoard />} />
+          <Route path="/ads" element={<AdRequest />} />
+          <Route path="/stores" element={<Stores />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
