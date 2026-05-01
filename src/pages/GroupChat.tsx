@@ -25,6 +25,10 @@ const GroupChat = () => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+  const [onlineCount, setOnlineCount] = useState(0);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastTypingSentRef = useRef(0);
 
   const { data: group } = useQuery({
     queryKey: ["group-chat-meta", id],
@@ -82,6 +86,51 @@ const GroupChat = () => {
     };
   }, [id, qc]);
 
+  // presence + typing channel
+  useEffect(() => {
+    if (!id || !user) return;
+    const ch = supabase.channel(`group-presence-${id}`, {
+      config: { presence: { key: user.id } },
+    });
+    typingChannelRef.current = ch;
+    ch.on("presence", { event: "sync" }, () => {
+      const state = ch.presenceState();
+      setOnlineCount(Object.keys(state).length);
+    });
+    ch.on("broadcast", { event: "typing" }, (payload) => {
+      const senderId = (payload.payload as { userId: string }).userId;
+      if (senderId === user.id) return;
+      setTypingUsers((prev) => ({ ...prev, [senderId]: Date.now() }));
+    });
+    ch.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await ch.track({ online_at: new Date().toISOString() });
+      }
+    });
+    const cleanup = setInterval(() => {
+      setTypingUsers((prev) => {
+        const now = Date.now();
+        const next: Record<string, number> = {};
+        for (const [k, v] of Object.entries(prev)) if (now - v < 4000) next[k] = v;
+        return next;
+      });
+    }, 1500);
+    return () => {
+      clearInterval(cleanup);
+      supabase.removeChannel(ch);
+      typingChannelRef.current = null;
+    };
+  }, [id, user]);
+
+  const broadcastTyping = () => {
+    const ch = typingChannelRef.current;
+    if (!ch || !user) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 1500) return;
+    lastTypingSentRef.current = now;
+    ch.send({ type: "broadcast", event: "typing", payload: { userId: user.id } });
+  };
+
   // 자동 스크롤
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -117,6 +166,12 @@ const GroupChat = () => {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold truncate">{group?.name ?? "모임 채팅"}</h1>
+            {onlineCount > 0 && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                접속 {onlineCount}명
+              </p>
+            )}
           </div>
         </header>
 
@@ -158,6 +213,16 @@ const GroupChat = () => {
           ) : (
             <div className="text-center py-16 text-sm text-muted-foreground">첫 메시지를 보내보세요</div>
           )}
+          {Object.keys(typingUsers).length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground italic px-1">
+              <span className="flex gap-0.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0.15s]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0.3s]" />
+              </span>
+              입력 중...
+            </div>
+          )}
         </div>
 
         <form
@@ -166,7 +231,7 @@ const GroupChat = () => {
         >
           <Input
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); broadcastTyping(); }}
             placeholder="메시지 입력..."
             maxLength={1000}
           />
