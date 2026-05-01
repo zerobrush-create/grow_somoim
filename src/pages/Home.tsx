@@ -6,11 +6,13 @@ import { categories } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import logo from "@/assets/grow-logo.png";
 
 const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const unread = useUnreadNotifications();
 
   const { data: banners } = useQuery({
     queryKey: ["banners-active"],
@@ -27,15 +29,6 @@ const Home = () => {
     queryFn: async () => {
       const res = await supabase.from("groups").select("id,name,category,location,image_url,description").eq("status", "active").order("created_at", { ascending: false }).range(8, 12);
       return res.data ?? [];
-    },
-  });
-
-  const { data: unread } = useQuery({
-    queryKey: ["unread-notif", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("is_read", false);
-      return count ?? 0;
     },
   });
 
