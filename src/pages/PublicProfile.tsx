@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FollowButton } from "@/components/FollowButton";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -87,6 +88,11 @@ const PublicProfile = () => {
                     <MessageCircle className="h-4 w-4 mr-1" /> 메시지
                   </Button>
                 )}
+              </div>
+            )}
+            {!isMe && user && (
+              <div className="mt-2 flex justify-end">
+                <ReportDialog targetType="user" targetId={profile.id} />
               </div>
             )}
           </div>
