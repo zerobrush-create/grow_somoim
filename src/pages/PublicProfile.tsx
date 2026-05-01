@@ -66,14 +66,14 @@ const PublicProfile = () => {
             {profile.bio && <p className="text-sm text-muted-foreground mt-3 whitespace-pre-line">{profile.bio}</p>}
 
             <div className="flex justify-center gap-6 mt-4 text-sm">
-              <div className="text-center">
+              <Link to={`/users/${profile.id}/follows`} className="text-center hover:opacity-70">
                 <p className="font-bold">{followers ?? 0}</p>
                 <p className="text-xs text-muted-foreground">팔로워</p>
-              </div>
-              <div className="text-center">
+              </Link>
+              <Link to={`/users/${profile.id}/follows`} className="text-center hover:opacity-70">
                 <p className="font-bold">{following ?? 0}</p>
                 <p className="text-xs text-muted-foreground">팔로잉</p>
-              </div>
+              </Link>
               <div className="text-center">
                 <p className="font-bold">{groups?.length ?? 0}</p>
                 <p className="text-xs text-muted-foreground">모임</p>
