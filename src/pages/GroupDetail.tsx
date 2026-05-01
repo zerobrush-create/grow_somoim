@@ -221,18 +221,24 @@ const GroupDetail = () => {
             </div>
           )}
           {activeTab === "board" && (
-            <div className="text-center py-16 text-muted-foreground text-sm">아직 게시글이 없어요</div>
+            <div className="px-4 py-6 text-center">
+              <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">멤버들과 자유롭게 소통해 보세요</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/board`)}>게시판 가기</Button>
+            </div>
           )}
           {activeTab === "photos" && (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              <Image className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              아직 사진이 없어요
+            <div className="px-4 py-6 text-center">
+              <Image className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">모임 추억을 사진으로 공유해 보세요</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/photos`)}>사진첩 가기</Button>
             </div>
           )}
           {activeTab === "notices" && (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              <Bell className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              공지사항이 없어요
+            <div className="px-4 py-6 text-center">
+              <Bell className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">중요한 공지사항을 확인해 보세요</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/announcements`)}>공지 보기</Button>
             </div>
           )}
         </div>
