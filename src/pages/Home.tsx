@@ -25,8 +25,6 @@ const Home = () => {
   const { data: hot } = useQuery({
     queryKey: ["home-hot"],
     queryFn: async () => {
-      const { data } = await supabase.rpc as any;
-      // fallback: list by member count via memberships count is heavy; use latest active 5
       const res = await supabase.from("groups").select("id,name,category,location,image_url,description").eq("status", "active").order("created_at", { ascending: false }).range(8, 12);
       return res.data ?? [];
     },
