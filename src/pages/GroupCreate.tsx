@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,32 +52,48 @@ const GroupCreate = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [maxMembers, setMaxMembers] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<keyof FieldErrors, boolean>>({
+    name: false,
+    category: false,
+    location: false,
+    maxMembers: false,
+    description: false,
+  });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const validation = useMemo(() => {
+    const result = groupSchema.safeParse({
+      name,
+      category,
+      location,
+      maxMembers: maxMembers === "" ? "" : maxMembers,
+      description,
+    });
+    const fieldErrors: FieldErrors = {};
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as keyof FieldErrors;
+        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+    }
+    return { success: result.success, data: result.success ? result.data : null, fieldErrors };
+  }, [name, category, location, maxMembers, description]);
+
+  const showError = (field: keyof FieldErrors) =>
+    (touched[field] || submitAttempted) ? validation.fieldErrors[field] : undefined;
+
+  const markTouched = (field: keyof FieldErrors) =>
+    setTouched((t) => (t[field] ? t : { ...t, [field]: true }));
 
   const create = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("로그인이 필요합니다");
-
-      const parsed = groupSchema.safeParse({
-        name,
-        category,
-        location,
-        maxMembers: maxMembers === "" ? "" : maxMembers,
-        description,
-      });
-
-      if (!parsed.success) {
-        const fieldErrors: FieldErrors = {};
-        for (const issue of parsed.error.issues) {
-          const key = issue.path[0] as keyof FieldErrors;
-          if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-        }
-        setErrors(fieldErrors);
-        throw new Error(parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요");
+      if (!validation.success || !validation.data) {
+        throw new Error(
+          Object.values(validation.fieldErrors)[0] ?? "입력값을 확인해 주세요"
+        );
       }
-      setErrors({});
-
-      const v = parsed.data;
+      const v = validation.data;
 
       const { data, error } = await supabase
         .from("groups")
@@ -136,6 +152,8 @@ const GroupCreate = () => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            setSubmitAttempted(true);
+            if (!validation.success) return;
             create.mutate();
           }}
           className="px-4 pt-4 space-y-5"
@@ -146,12 +164,13 @@ const GroupCreate = () => {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={() => markTouched("name")}
               placeholder="예: 주말엔 북클럽"
               maxLength={40}
               required
-              aria-invalid={!!errors.name}
+              aria-invalid={!!showError("name")}
             />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            {showError("name") && <p className="text-sm text-destructive">{showError("name")}</p>}
           </div>
 
           <div className="space-y-2">
@@ -161,7 +180,10 @@ const GroupCreate = () => {
                 <button
                   type="button"
                   key={c}
-                  onClick={() => setCategory(c)}
+                  onClick={() => {
+                    setCategory(c);
+                    markTouched("category");
+                  }}
                   className={cn(
                     "px-3 py-1.5 rounded-full text-sm font-medium transition-smooth",
                     category === c
@@ -173,7 +195,7 @@ const GroupCreate = () => {
                 </button>
               ))}
             </div>
-            {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
+            {showError("category") && <p className="text-sm text-destructive">{showError("category")}</p>}
           </div>
 
           <div className="space-y-2">
@@ -182,11 +204,12 @@ const GroupCreate = () => {
               id="location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              onBlur={() => markTouched("location")}
               placeholder="예: 서울 마포구"
               maxLength={60}
-              aria-invalid={!!errors.location}
+              aria-invalid={!!showError("location")}
             />
-            {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
+            {showError("location") && <p className="text-sm text-destructive">{showError("location")}</p>}
           </div>
 
           <div className="space-y-2">
@@ -198,10 +221,11 @@ const GroupCreate = () => {
               max={1000}
               value={maxMembers}
               onChange={(e) => setMaxMembers(e.target.value)}
+              onBlur={() => markTouched("maxMembers")}
               placeholder="제한 없음"
-              aria-invalid={!!errors.maxMembers}
+              aria-invalid={!!showError("maxMembers")}
             />
-            {errors.maxMembers && <p className="text-sm text-destructive">{errors.maxMembers}</p>}
+            {showError("maxMembers") && <p className="text-sm text-destructive">{showError("maxMembers")}</p>}
           </div>
 
           <div className="space-y-2">
@@ -210,14 +234,15 @@ const GroupCreate = () => {
               id="desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => markTouched("description")}
               placeholder="어떤 모임인가요? 함께하면 좋을 분들을 알려주세요."
               rows={5}
               maxLength={500}
-              aria-invalid={!!errors.description}
+              aria-invalid={!!showError("description")}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              {errors.description ? (
-                <span className="text-destructive">{errors.description}</span>
+              {showError("description") ? (
+                <span className="text-destructive">{showError("description")}</span>
               ) : (
                 <span>자유롭게 소개해 주세요</span>
               )}
@@ -228,7 +253,7 @@ const GroupCreate = () => {
           <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40 p-3">
             <Button
               type="submit"
-              disabled={create.isPending || !name.trim()}
+              disabled={create.isPending || !validation.success}
               className="w-full h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-glow hover:opacity-95"
             >
               {create.isPending ? "만드는 중..." : "모임 만들기"}
