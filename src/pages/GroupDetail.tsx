@@ -29,7 +29,6 @@ const GroupDetail = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: group, isLoading } = useGroup(id);
-  const [liked, setLiked] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
@@ -46,6 +45,27 @@ const GroupDetail = () => {
         .maybeSingle();
       return data;
     },
+  });
+
+  const { data: bookmark } = useQuery({
+    queryKey: ["bookmark-group", id, user?.id],
+    enabled: !!id && !!user,
+    queryFn: async () => (await supabase.from("bookmarks").select("id").eq("user_id", user!.id).eq("target_type", "group").eq("target_id", id!).maybeSingle()).data,
+  });
+  const liked = !!bookmark;
+
+  const toggleBookmark = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("로그인이 필요합니다");
+      if (bookmark) {
+        const { error } = await supabase.from("bookmarks").delete().eq("id", bookmark.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bookmarks").insert({ user_id: user.id, target_type: "group", target_id: id! });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmark-group", id, user?.id] }),
   });
 
   const { data: reviews } = useQuery({
@@ -170,7 +190,7 @@ const GroupDetail = () => {
                 </>
               )}
               <button
-                onClick={() => setLiked(!liked)}
+                onClick={() => user ? toggleBookmark.mutate() : navigate("/login")}
                 className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center"
                 aria-label="찜"
               >
