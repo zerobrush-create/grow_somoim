@@ -8,6 +8,7 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Groups from "./pages/Groups.tsx";
 import GroupDetail from "./pages/GroupDetail.tsx";
+import GroupCreate from "./pages/GroupCreate.tsx";
 import Classes from "./pages/Classes.tsx";
 import ClassDetail from "./pages/ClassDetail.tsx";
 import Chat from "./pages/Chat.tsx";
@@ -26,6 +27,7 @@ const App = () => (
           <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/groups/new" element={<GroupCreate />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/classes" element={<Classes />} />
           <Route path="/classes/:id" element={<ClassDetail />} />

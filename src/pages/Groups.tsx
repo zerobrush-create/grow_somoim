@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, SlidersHorizontal, MapPin, Users } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Users, Plus } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,13 @@ const Groups = () => {
           <button className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="필터">
             <SlidersHorizontal className="h-5 w-5" />
           </button>
+          <Link
+            to="/groups/new"
+            className="p-2 rounded-full hover:bg-muted transition-smooth"
+            aria-label="모임 만들기"
+          >
+            <Plus className="h-5 w-5" />
+          </Link>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
           {categories.map((c) => (
