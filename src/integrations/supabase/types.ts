@@ -805,6 +805,33 @@ export type Database = {
           },
         ]
       }
+      group_reviews: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          group_id: string
+          id: number
+          rating: number
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          group_id: string
+          id?: number
+          rating: number
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          group_id?: string
+          id?: number
+          rating?: number
+        }
+        Relationships: []
+      }
       groups: {
         Row: {
           category: string
