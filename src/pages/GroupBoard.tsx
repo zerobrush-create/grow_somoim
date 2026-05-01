@@ -1,0 +1,228 @@
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Heart, MessageCircle, Plus, Pin } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+type Post = {
+  id: number;
+  title: string;
+  content: string;
+  author_id: string;
+  is_pinned: boolean;
+  created_at: string;
+};
+
+const GroupBoard = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [openPostId, setOpenPostId] = useState<number | null>(null);
+
+  const { data: group } = useQuery({
+    queryKey: ["group-meta", id],
+    enabled: !!id,
+    queryFn: async () => (await supabase.from("groups").select("id,name,owner_id").eq("id", id!).maybeSingle()).data,
+  });
+
+  const { data: membership } = useQuery({
+    queryKey: ["membership", id, user?.id],
+    enabled: !!id && !!user,
+    queryFn: async () => (await supabase.from("memberships").select("status").eq("group_id", id!).eq("user_id", user!.id).maybeSingle()).data,
+  });
+
+  const isMember = membership?.status === "approved" || group?.owner_id === user?.id;
+
+  const { data: posts, isLoading } = useQuery({
+    queryKey: ["board-posts", id],
+    enabled: !!id,
+    queryFn: async (): Promise<Post[]> => {
+      const { data, error } = await supabase
+        .from("board_posts")
+        .select("id,title,content,author_id,is_pinned,created_at")
+        .eq("group_id", id!)
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const authorIds = Array.from(new Set((posts ?? []).map((p) => p.author_id)));
+  const { data: authors } = useQuery({
+    queryKey: ["board-authors", id, authorIds.join(",")],
+    enabled: authorIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id,name,avatar_url,email").in("id", authorIds);
+      return new Map((data ?? []).map((p) => [p.id as string, p]));
+    },
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!user || !id) throw new Error("로그인이 필요합니다");
+      if (!title.trim() || !content.trim()) throw new Error("제목과 내용을 입력해주세요");
+      const { error } = await supabase.from("board_posts").insert({
+        group_id: id, author_id: user.id, title: title.trim(), content: content.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "게시글이 등록되었어요" });
+      setOpen(false); setTitle(""); setContent("");
+      qc.invalidateQueries({ queryKey: ["board-posts", id] });
+    },
+    onError: (e: Error) => toast({ title: "등록 실패", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-md pb-24">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-base font-bold flex-1 truncate">{group?.name ?? "게시판"}</h1>
+        </header>
+
+        <div className="divide-y divide-border">
+          {isLoading ? (
+            <div className="p-4 space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>
+          ) : posts && posts.length > 0 ? (
+            posts.map((p) => {
+              const a = authors?.get(p.author_id);
+              return (
+                <button key={p.id} onClick={() => setOpenPostId(p.id)} className="w-full text-left px-4 py-4 hover:bg-muted/40 transition-smooth">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {p.is_pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
+                    <span className="text-sm font-bold flex-1 truncate">{p.title}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{p.content}</p>
+                  <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
+                    <Avatar className="h-5 w-5"><AvatarImage src={a?.avatar_url ?? undefined} /><AvatarFallback>{(a?.name ?? "?").slice(0,1)}</AvatarFallback></Avatar>
+                    <span>{a?.name ?? a?.email ?? "익명"}</span>
+                    <span>·</span>
+                    <span>{new Date(p.created_at).toLocaleDateString("ko-KR")}</span>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <div className="text-center py-20 text-sm text-muted-foreground">아직 게시글이 없어요</div>
+          )}
+        </div>
+
+        {isMember && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="fixed bottom-6 right-1/2 translate-x-[180px] h-14 w-14 rounded-full gradient-primary shadow-glow z-40" aria-label="글쓰기">
+                <Plus className="h-6 w-6" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>새 게시글</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <Input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
+                <Textarea placeholder="내용을 입력하세요" value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
+                <Button onClick={() => create.mutate()} disabled={create.isPending} className="w-full gradient-primary">
+                  {create.isPending ? "등록 중..." : "등록"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {openPostId && (
+          <PostDetail postId={openPostId} onClose={() => setOpenPostId(null)} canComment={!!isMember} userId={user?.id} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; onClose: () => void; canComment: boolean; userId?: string }) => {
+  const qc = useQueryClient();
+  const [text, setText] = useState("");
+  const { data: post } = useQuery({
+    queryKey: ["board-post", postId],
+    queryFn: async () => (await supabase.from("board_posts").select("*").eq("id", postId).maybeSingle()).data,
+  });
+  const { data: comments } = useQuery({
+    queryKey: ["board-comments", postId],
+    queryFn: async () => (await supabase.from("board_comments").select("*").eq("post_id", postId).order("created_at", { ascending: true })).data ?? [],
+  });
+  const { data: likes } = useQuery({
+    queryKey: ["board-likes", postId],
+    queryFn: async () => (await supabase.from("board_post_likes").select("user_id").eq("post_id", postId)).data ?? [],
+  });
+  const liked = !!likes?.some((l) => l.user_id === userId);
+
+  const toggleLike = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error("로그인이 필요합니다");
+      if (liked) {
+        await supabase.from("board_post_likes").delete().eq("post_id", postId).eq("user_id", userId);
+      } else {
+        await supabase.from("board_post_likes").insert({ post_id: postId, user_id: userId });
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["board-likes", postId] }),
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const addComment = useMutation({
+    mutationFn: async () => {
+      if (!userId || !text.trim()) return;
+      const { error } = await supabase.from("board_comments").insert({ post_id: postId, author_id: userId, content: text.trim() });
+      if (error) throw error;
+      setText("");
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["board-comments", postId] }),
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="pr-6">{post?.title ?? "..."}</DialogTitle></DialogHeader>
+        <p className="text-sm whitespace-pre-wrap text-foreground">{post?.content}</p>
+        <div className="flex items-center gap-3 border-t border-b border-border py-2 text-sm">
+          <button onClick={() => toggleLike.mutate()} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary">
+            <Heart className={cn("h-4 w-4", liked && "fill-accent text-accent")} /> {likes?.length ?? 0}
+          </button>
+          <span className="flex items-center gap-1.5 text-muted-foreground"><MessageCircle className="h-4 w-4" /> {comments?.length ?? 0}</span>
+        </div>
+        <div className="space-y-2">
+          {comments?.map((c) => (
+            <div key={c.id} className="text-sm bg-muted rounded-lg px-3 py-2">
+              <p className="text-[11px] text-muted-foreground mb-0.5">{new Date(c.created_at).toLocaleString("ko-KR")}</p>
+              <p>{c.content}</p>
+            </div>
+          ))}
+        </div>
+        {canComment && (
+          <form onSubmit={(e) => { e.preventDefault(); addComment.mutate(); }} className="flex gap-2 pt-2">
+            <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="댓글 작성..." maxLength={500} />
+            <Button type="submit" disabled={addComment.isPending || !text.trim()}>등록</Button>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default GroupBoard;
