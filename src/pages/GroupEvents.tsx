@@ -1,0 +1,214 @@
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Calendar, MapPin, Plus, Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+
+type EventRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  starts_at: string;
+  max_attendees: number | null;
+};
+
+const GroupEvents = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [maxAttendees, setMaxAttendees] = useState("");
+
+  const { data: events, isLoading } = useQuery({
+    queryKey: ["group-events", id],
+    enabled: !!id,
+    queryFn: async (): Promise<EventRow[]> => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id,title,description,location,starts_at,max_attendees")
+        .eq("group_id", id!)
+        .order("starts_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const eventIds = (events ?? []).map((e) => e.id);
+  const { data: attendees } = useQuery({
+    queryKey: ["event-attendees", id, eventIds.join(",")],
+    enabled: eventIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("event_attendees").select("event_id,user_id").in("event_id", eventIds);
+      return data ?? [];
+    },
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!user || !id) throw new Error("로그인이 필요합니다");
+      if (!title.trim()) throw new Error("제목을 입력해 주세요");
+      if (!startsAt) throw new Error("시작 일시를 선택해 주세요");
+      const { error } = await supabase.from("events").insert({
+        group_id: id,
+        title: title.trim(),
+        description: description.trim() || null,
+        location: location.trim() || null,
+        starts_at: new Date(startsAt).toISOString(),
+        max_attendees: maxAttendees ? Number(maxAttendees) : null,
+        created_by: user.id,
+        status: "upcoming",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "일정이 생성되었어요" });
+      setOpen(false);
+      setTitle(""); setStartsAt(""); setLocation(""); setDescription(""); setMaxAttendees("");
+      qc.invalidateQueries({ queryKey: ["group-events", id] });
+    },
+    onError: (e: Error) => toast({ title: "생성 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const rsvp = useMutation({
+    mutationFn: async ({ eventId, going }: { eventId: string; going: boolean }) => {
+      if (!user) throw new Error("로그인이 필요합니다");
+      if (going) {
+        const { error } = await supabase.from("event_attendees").insert({ event_id: eventId, user_id: user.id });
+        if (error && !error.message.includes("duplicate")) throw error;
+      } else {
+        const { error } = await supabase.from("event_attendees").delete().eq("event_id", eventId).eq("user_id", user.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["event-attendees", id] }),
+    onError: (e: Error) => toast({ title: "처리 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const countFor = (eid: string) => (attendees ?? []).filter((a) => a.event_id === eid).length;
+  const isAttending = (eid: string) =>
+    !!user && (attendees ?? []).some((a) => a.event_id === eid && a.user_id === user.id);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-md pb-20">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-lg font-bold flex-1">모임 일정</h1>
+          {user && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="일정 추가">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>새 일정</DialogTitle>
+                  <DialogDescription>모임 멤버에게 공유할 일정을 만들어요.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="t">제목 *</Label>
+                    <Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="s">시작 일시 *</Label>
+                    <Input id="s" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="l">장소</Label>
+                    <Input id="l" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="m">정원</Label>
+                    <Input id="m" inputMode="numeric" value={maxAttendees}
+                      onChange={(e) => setMaxAttendees(e.target.value.replace(/[^0-9]/g, ""))} placeholder="제한 없음" maxLength={4} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="d">설명</Label>
+                    <Textarea id="d" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)}>취소</Button>
+                  <Button onClick={() => create.mutate()} disabled={create.isPending}>
+                    {create.isPending ? "생성 중..." : "만들기"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </header>
+
+        <div className="px-4 py-4 space-y-3">
+          {isLoading ? (
+            <Skeleton className="h-24 w-full rounded-xl" />
+          ) : events && events.length > 0 ? (
+            events.map((ev) => {
+              const attending = isAttending(ev.id);
+              const count = countFor(ev.id);
+              const full = ev.max_attendees != null && count >= ev.max_attendees && !attending;
+              return (
+                <div key={ev.id} className="rounded-xl border border-border p-4 space-y-2">
+                  <h3 className="font-bold">{ev.title}</h3>
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(ev.starts_at).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}
+                    </span>
+                    {ev.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{ev.location}</span>}
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" />
+                      {count}{ev.max_attendees ? `/${ev.max_attendees}` : ""}
+                    </span>
+                  </div>
+                  {ev.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{ev.description}</p>}
+                  {user && (
+                    <Button
+                      size="sm"
+                      variant={attending ? "outline" : "default"}
+                      onClick={() => rsvp.mutate({ eventId: ev.id, going: !attending })}
+                      disabled={rsvp.isPending || full}
+                      className="w-full"
+                    >
+                      {attending ? "참석 취소" : full ? "정원 마감" : "참석할게요"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-16 text-sm text-muted-foreground">아직 일정이 없어요</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GroupEvents;
