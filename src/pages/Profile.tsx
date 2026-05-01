@@ -1,16 +1,43 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { userProfile, groups } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 
 const Profile = () => {
-  const { name, location, mbti, bio, interests, groupCount, classCount, points, referralCode } = userProfile;
-  const myGroups = groups.slice(0, groupCount);
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [profileName, setProfileName] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setProfileName(data?.name ?? null));
+  }, [user]);
+
+  if (loading) {
+    return (
+      <MobileShell>
+        <div className="px-4 pt-10 text-center text-sm text-muted-foreground">불러오는 중...</div>
+      </MobileShell>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+
+  const { location, mbti, bio, interests, groupCount, classCount, points, referralCode } = userProfile;
+  const name = profileName ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "회원";
+  const myGroups = groups.slice(0, groupCount);
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode).catch(() => {});
@@ -175,7 +202,15 @@ const Profile = () => {
 
       {/* Logout */}
       <section className="px-4 pt-4 pb-4">
-        <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button
+          variant="ghost"
+          onClick={async () => {
+            await signOut();
+            toast({ title: "로그아웃 되었어요" });
+            navigate("/login", { replace: true });
+          }}
+          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
           <LogOut className="h-4 w-4 mr-2" />
           로그아웃
         </Button>
