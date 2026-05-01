@@ -29,7 +29,6 @@ const GroupDetail = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: group, isLoading } = useGroup(id);
-  const [liked, setLiked] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
@@ -191,7 +190,7 @@ const GroupDetail = () => {
                 </>
               )}
               <button
-                onClick={() => setLiked(!liked)}
+                onClick={() => user ? toggleBookmark.mutate() : navigate("/login")}
                 className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center"
                 aria-label="찜"
               >
