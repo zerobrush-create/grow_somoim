@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,34 @@ import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["운동", "스터디", "취미", "맛집", "여행", "음악", "반려동물"];
 
+const groupSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, { message: "모임 이름은 2자 이상이어야 해요" })
+    .max(40, { message: "모임 이름은 40자 이하로 입력해 주세요" }),
+  category: z.enum(CATEGORIES as [string, ...string[]], {
+    errorMap: () => ({ message: "카테고리를 선택해 주세요" }),
+  }),
+  location: z
+    .string()
+    .trim()
+    .max(60, { message: "지역은 60자 이하로 입력해 주세요" })
+    .optional()
+    .or(z.literal("")),
+  maxMembers: z
+    .union([z.literal(""), z.coerce.number().int().min(2, { message: "정원은 2명 이상이어야 해요" }).max(1000, { message: "정원은 1000명 이하로 입력해 주세요" })])
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(500, { message: "소개는 500자 이하로 입력해 주세요" })
+    .optional()
+    .or(z.literal("")),
+});
+
+type FieldErrors = Partial<Record<"name" | "category" | "location" | "maxMembers" | "description", string>>;
+
 const GroupCreate = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -23,20 +52,41 @@ const GroupCreate = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [maxMembers, setMaxMembers] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   const create = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("로그인이 필요합니다");
-      if (!name.trim()) throw new Error("모임 이름을 입력해 주세요");
+
+      const parsed = groupSchema.safeParse({
+        name,
+        category,
+        location,
+        maxMembers: maxMembers === "" ? "" : maxMembers,
+        description,
+      });
+
+      if (!parsed.success) {
+        const fieldErrors: FieldErrors = {};
+        for (const issue of parsed.error.issues) {
+          const key = issue.path[0] as keyof FieldErrors;
+          if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+        }
+        setErrors(fieldErrors);
+        throw new Error(parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요");
+      }
+      setErrors({});
+
+      const v = parsed.data;
 
       const { data, error } = await supabase
         .from("groups")
         .insert({
-          name: name.trim(),
-          category,
-          location: location.trim() || null,
-          description: description.trim() || null,
-          max_members: maxMembers ? Number(maxMembers) : null,
+          name: v.name,
+          category: v.category,
+          location: v.location ? v.location : null,
+          description: v.description ? v.description : null,
+          max_members: typeof v.maxMembers === "number" ? v.maxMembers : null,
           owner_id: user.id,
           status: "active",
         })
@@ -99,7 +149,9 @@ const GroupCreate = () => {
               placeholder="예: 주말엔 북클럽"
               maxLength={40}
               required
+              aria-invalid={!!errors.name}
             />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -121,6 +173,7 @@ const GroupCreate = () => {
                 </button>
               ))}
             </div>
+            {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
           </div>
 
           <div className="space-y-2">
@@ -130,7 +183,10 @@ const GroupCreate = () => {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="예: 서울 마포구"
+              maxLength={60}
+              aria-invalid={!!errors.location}
             />
+            {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
           </div>
 
           <div className="space-y-2">
@@ -138,11 +194,14 @@ const GroupCreate = () => {
             <Input
               id="max"
               type="number"
-              min={1}
+              min={2}
+              max={1000}
               value={maxMembers}
               onChange={(e) => setMaxMembers(e.target.value)}
               placeholder="제한 없음"
+              aria-invalid={!!errors.maxMembers}
             />
+            {errors.maxMembers && <p className="text-sm text-destructive">{errors.maxMembers}</p>}
           </div>
 
           <div className="space-y-2">
@@ -154,7 +213,16 @@ const GroupCreate = () => {
               placeholder="어떤 모임인가요? 함께하면 좋을 분들을 알려주세요."
               rows={5}
               maxLength={500}
+              aria-invalid={!!errors.description}
             />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              {errors.description ? (
+                <span className="text-destructive">{errors.description}</span>
+              ) : (
+                <span>자유롭게 소개해 주세요</span>
+              )}
+              <span>{description.length}/500</span>
+            </div>
           </div>
 
           <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40 p-3">
