@@ -1,0 +1,182 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Send } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+type Message = {
+  id: number;
+  content: string;
+  sender_id: string;
+  created_at: string;
+};
+
+const GroupChat = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [text, setText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: group } = useQuery({
+    queryKey: ["group-chat-meta", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase.from("groups").select("id,name").eq("id", id!).maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: messages, isLoading } = useQuery({
+    queryKey: ["group-messages", id],
+    enabled: !!id && !!user,
+    queryFn: async (): Promise<Message[]> => {
+      const { data, error } = await supabase
+        .from("group_messages")
+        .select("id,content,sender_id,created_at")
+        .eq("group_id", id!)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // 보낸 사람 프로필 조회
+  const senderIds = Array.from(new Set((messages ?? []).map((m) => m.sender_id)));
+  const { data: senders } = useQuery({
+    queryKey: ["chat-senders", id, senderIds.join(",")],
+    enabled: senderIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id,name,avatar_url,email")
+        .in("id", senderIds);
+      return new Map((data ?? []).map((p) => [p.id as string, p]));
+    },
+  });
+
+  // realtime 구독
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`group-messages-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${id}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["group-messages", id] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, qc]);
+
+  // 자동 스크롤
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  const send = useMutation({
+    mutationFn: async () => {
+      if (!user || !id) throw new Error("로그인이 필요합니다");
+      const content = text.trim();
+      if (!content) return;
+      const { error } = await supabase.from("group_messages").insert({
+        group_id: id,
+        sender_id: user.id,
+        content,
+      });
+      if (error) throw error;
+      setText("");
+    },
+    onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
+  });
+
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="mx-auto max-w-md w-full flex flex-col flex-1">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold truncate">{group?.name ?? "모임 채팅"}</h1>
+          </div>
+        </header>
+
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-12 w-2/3" />
+              <Skeleton className="h-12 w-1/2 ml-auto" />
+            </>
+          ) : messages && messages.length > 0 ? (
+            messages.map((m) => {
+              const mine = m.sender_id === user.id;
+              const s = senders?.get(m.sender_id);
+              return (
+                <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
+                  {!mine && (
+                    <Avatar className="h-8 w-8 mt-auto">
+                      <AvatarImage src={s?.avatar_url ?? undefined} />
+                      <AvatarFallback>{(s?.name ?? s?.email ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
+                    {!mine && <span className="text-xs text-muted-foreground mb-0.5">{s?.name ?? s?.email ?? "?"}</span>}
+                    <div
+                      className={cn(
+                        "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words",
+                        mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"
+                      )}
+                    >
+                      {m.content}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">
+                      {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-16 text-sm text-muted-foreground">첫 메시지를 보내보세요</div>
+          )}
+        </div>
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
+          className="border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom"
+        >
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="메시지 입력..."
+            maxLength={1000}
+          />
+          <Button type="submit" size="icon" disabled={send.isPending || !text.trim()} aria-label="전송">
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default GroupChat;
