@@ -32,7 +32,7 @@ const Stores = () => {
       if ((pointsTotal ?? 0) < amount) throw new Error("포인트가 부족해요");
       const { error: txErr } = await supabase.from("store_transactions").insert({ store_id: storeId, user_id: user.id, amount });
       if (txErr) throw txErr;
-      const { error: pErr } = await supabase.from("points").insert({ user_id: user.id, amount: -amount, type: "spend", description: "가맹점 결제" });
+      const { error: pErr } = await supabase.from("points").insert({ user_id: user.id, amount: -amount, type: "use", description: "가맹점 결제" });
       if (pErr) throw pErr;
     },
     onSuccess: () => { toast({ title: "결제 완료" }); qc.invalidateQueries({ queryKey: ["points-total", user?.id] }); },
