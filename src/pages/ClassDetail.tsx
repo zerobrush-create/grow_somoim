@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ReportDialog } from "@/components/ReportDialog";
 
 type Tab = "intro" | "reviews";
 
@@ -135,6 +136,11 @@ const ClassDetail = () => {
         <div className="px-4 pt-5">
           {cls.category && <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{cls.category}</Badge>}
           <h1 className="text-xl font-bold mt-2 leading-snug">{cls.title}</h1>
+          {user && !isInstructor && (
+            <div className="flex justify-end -mt-1">
+              <ReportDialog targetType="class" targetId={String(cls.id)} />
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-3">
             <Avatar className="h-8 w-8"><AvatarImage src={instructor?.avatar_url ?? undefined} /><AvatarFallback><User className="h-4 w-4" /></AvatarFallback></Avatar>
             <div>
