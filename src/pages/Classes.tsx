@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Plus, BookOpen, Search, X, Star } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { MapPin, Plus, BookOpen, Search, X, Star, History } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,13 +12,22 @@ import { cn } from "@/lib/utils";
 
 const filters = ["전체", "공예", "쿠킹", "요가", "사진", "독서", "아웃도어"];
 const PRICE = ["전체", "무료", "유료"] as const;
+type SortKey = "recent" | "popular" | "rating";
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: "recent", label: "최신순" },
+  { id: "popular", label: "인기순" },
+  { id: "rating", label: "평점순" },
+];
 
 const Classes = () => {
   const [active, setActive] = useState("전체");
   const [query, setQuery] = useState("");
   const [price, setPrice] = useState<typeof PRICE[number]>("전체");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [showHistory, setShowHistory] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const qc = useQueryClient();
 
   const { data: list, isLoading } = useQuery({
     queryKey: ["classes", active],
@@ -45,6 +54,30 @@ const Classes = () => {
     },
   });
 
+  const { data: enrollAgg } = useQuery({
+    queryKey: ["classes-enroll-agg"],
+    queryFn: async () => {
+      const { data } = await supabase.from("class_enrollments").select("class_id");
+      const map: Record<number, number> = {};
+      (data ?? []).forEach((r) => { map[r.class_id as number] = (map[r.class_id as number] ?? 0) + 1; });
+      return map;
+    },
+  });
+
+  const { data: history } = useQuery({
+    queryKey: ["search-history-class", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.from("search_history").select("id,query").eq("user_id", user!.id).ilike("query", "cls:%").order("created_at", { ascending: false }).limit(8)).data ?? [],
+  });
+  const saveQuery = useMutation({
+    mutationFn: async (q: string) => { if (!user || !q.trim()) return; await supabase.from("search_history").insert({ user_id: user.id, query: `cls:${q.trim()}` }); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["search-history-class", user?.id] }),
+  });
+  const removeHistory = useMutation({
+    mutationFn: async (id: number) => { await supabase.from("search_history").delete().eq("id", id); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["search-history-class", user?.id] }),
+  });
+
   const filtered = (list ?? []).filter((c) => {
     if (price === "무료" && (c.price ?? "").trim() && c.price !== "무료" && !(c.price ?? "").startsWith("0")) return false;
     if (price === "유료" && (!c.price || c.price === "무료" || (c.price ?? "").startsWith("0"))) return false;
@@ -54,6 +87,14 @@ const Classes = () => {
       if (!hay.includes(q)) return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (sort === "popular") return (enrollAgg?.[b.id] ?? 0) - (enrollAgg?.[a.id] ?? 0);
+    if (sort === "rating") {
+      const ra = reviewAgg?.[a.id] ? reviewAgg[a.id].sum / reviewAgg[a.id].count : 0;
+      const rb = reviewAgg?.[b.id] ? reviewAgg[b.id].sum / reviewAgg[b.id].count : 0;
+      return rb - ra;
+    }
+    return b.id - a.id;
   });
 
   return (
@@ -68,20 +109,36 @@ const Classes = () => {
           )}
         </div>
         <p className="text-xs text-muted-foreground mb-3">새로운 취미를 배워보세요</p>
-        <div className="relative mb-3">
+        <form onSubmit={(e) => { e.preventDefault(); if (query.trim()) saveQuery.mutate(query); setShowHistory(false); }} className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setShowHistory(true)}
+            onBlur={() => setTimeout(() => setShowHistory(false), 150)}
             placeholder="클래스 검색"
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
-            <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
+            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
               <X className="h-4 w-4" />
             </button>
           )}
-        </div>
+          {showHistory && history && history.length > 0 && (
+            <div className="absolute z-40 left-0 right-0 top-12 bg-card rounded-2xl border border-border shadow-card p-2 space-y-1">
+              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />최근 검색</p>
+              {history.map((h) => {
+                const text = h.query.replace(/^cls:/, "");
+                return (
+                  <div key={h.id} className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-lg">
+                    <button type="button" onMouseDown={() => { setQuery(text); setShowHistory(false); }} className="flex-1 text-left text-sm truncate">{text}</button>
+                    <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label="삭제"><X className="h-3 w-3" /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </form>
         <div className="flex gap-2 mb-2">
           {PRICE.map((p) => (
             <button key={p} onClick={() => setPrice(p)} className={cn(
@@ -89,6 +146,14 @@ const Classes = () => {
               price === p ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
             )}>{p}</button>
           ))}
+          <div className="ml-auto flex gap-1">
+            {SORTS.map((s) => (
+              <button key={s.id} onClick={() => setSort(s.id)} className={cn(
+                "px-2.5 py-1 rounded-full text-[11px] font-medium transition-smooth",
+                sort === s.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+              )}>{s.label}</button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
           {filters.map((f) => (
