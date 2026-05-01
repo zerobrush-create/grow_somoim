@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
@@ -38,6 +40,30 @@ const Admin = () => {
     queryFn: async () => (await supabase.from("banners").select("*").order("order")).data ?? [],
   });
 
+  const { data: roles } = useQuery({
+    queryKey: ["admin-user-roles"],
+    enabled: !!isAdmin,
+    queryFn: async () => (await supabase.from("user_roles").select("id,user_id,role,created_at").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const [grantId, setGrantId] = useState("");
+  const [grantRole, setGrantRole] = useState<"admin" | "instructor" | "member">("instructor");
+
+  const grantRoleMut = useMutation({
+    mutationFn: async () => {
+      if (!grantId.trim()) throw new Error("user id를 입력하세요");
+      const { error } = await supabase.from("user_roles").insert({ user_id: grantId.trim(), role: grantRole });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast({ title: "역할이 부여되었어요" }); setGrantId(""); qc.invalidateQueries({ queryKey: ["admin-user-roles"] }); },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const revokeRole = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("user_roles").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-user-roles"] }),
+  });
+
   const updateApp = useMutation({
     mutationFn: async ({ id, status, applicantId }: { id: number; status: "approved" | "rejected"; applicantId: string }) => {
       const { error } = await supabase.from("instructor_applications").update({ status }).eq("id", id);
@@ -51,11 +77,24 @@ const Admin = () => {
   });
 
   const updateAd = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: "approved" | "rejected" }) => {
+    mutationFn: async ({ id, status, requesterId }: { id: number; status: "approved" | "rejected"; requesterId: string }) => {
       const { error } = await supabase.from("ad_requests").update({ status }).eq("id", id);
       if (error) throw error;
+      if (status === "approved") {
+        await supabase.from("banners").insert({
+          title: "광고 배너 #" + id,
+          type: "promo",
+          is_active: false,
+          order: 99,
+          requester_id: requesterId,
+        });
+      }
     },
-    onSuccess: () => { toast({ title: "처리 완료" }); qc.invalidateQueries({ queryKey: ["admin-ad-requests"] }); },
+    onSuccess: () => {
+      toast({ title: "처리 완료", description: "승인 시 비활성 배너가 생성됐어요" });
+      qc.invalidateQueries({ queryKey: ["admin-ad-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin-banners"] });
+    },
   });
 
   const toggleBanner = useMutation({
@@ -63,6 +102,11 @@ const Admin = () => {
       const { error } = await supabase.from("banners").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-banners"] }),
+  });
+
+  const removeBanner = useMutation({
+    mutationFn: async (id: number) => { const { error } = await supabase.from("banners").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-banners"] }),
   });
 
@@ -88,10 +132,11 @@ const Admin = () => {
         </header>
 
         <Tabs defaultValue="instructors" className="p-4">
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="instructors">강사 신청</TabsTrigger>
             <TabsTrigger value="ads">광고 요청</TabsTrigger>
             <TabsTrigger value="banners">배너</TabsTrigger>
+            <TabsTrigger value="roles">역할</TabsTrigger>
           </TabsList>
 
           <TabsContent value="instructors" className="space-y-2 mt-4">
@@ -120,8 +165,8 @@ const Admin = () => {
                 </div>
                 {r.status === "pending" && (
                   <>
-                    <Button size="sm" onClick={() => updateAd.mutate({ id: r.id, status: "approved" })}>승인</Button>
-                    <Button size="sm" variant="outline" onClick={() => updateAd.mutate({ id: r.id, status: "rejected" })}>거절</Button>
+                    <Button size="sm" onClick={() => updateAd.mutate({ id: r.id, status: "approved", requesterId: r.requester_id })}>승인</Button>
+                    <Button size="sm" variant="outline" onClick={() => updateAd.mutate({ id: r.id, status: "rejected", requesterId: r.requester_id })}>거절</Button>
                   </>
                 )}
               </div>
@@ -139,8 +184,31 @@ const Admin = () => {
                 <Button size="sm" variant={b.is_active ? "default" : "outline"} onClick={() => toggleBanner.mutate({ id: b.id, is_active: !b.is_active })}>
                   {b.is_active ? "활성" : "비활성"}
                 </Button>
+                <Button size="sm" variant="outline" onClick={() => removeBanner.mutate(b.id)} className="text-destructive">삭제</Button>
               </div>
             )) : <p className="text-center text-sm text-muted-foreground py-8">배너가 없어요</p>}
+          </TabsContent>
+
+          <TabsContent value="roles" className="space-y-3 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border space-y-2">
+              <p className="text-sm font-semibold">역할 부여</p>
+              <Input placeholder="user_id (UUID)" value={grantId} onChange={(e) => setGrantId(e.target.value)} />
+              <div className="flex gap-2">
+                {(["admin", "instructor", "member"] as const).map((r) => (
+                  <button key={r} onClick={() => setGrantRole(r)} className={`flex-1 py-1.5 rounded-md text-xs font-medium ${grantRole === r ? "bg-primary text-primary-foreground" : "bg-muted"}`}>{r}</button>
+                ))}
+              </div>
+              <Button size="sm" className="w-full" onClick={() => grantRoleMut.mutate()} disabled={grantRoleMut.isPending}>부여</Button>
+            </div>
+            {roles?.length ? roles.map((r) => (
+              <div key={r.id} className="bg-card rounded-xl p-3 border border-border flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">{r.user_id}</p>
+                  <Badge className="mt-1">{r.role}</Badge>
+                </div>
+                <Button size="sm" variant="outline" className="text-destructive" onClick={() => revokeRole.mutate(r.id)}>해제</Button>
+              </div>
+            )) : <p className="text-center text-sm text-muted-foreground py-6">역할 데이터가 없어요</p>}
           </TabsContent>
         </Tabs>
       </div>
