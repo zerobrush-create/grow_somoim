@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Users, MessageCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,20 @@ type ChatTab = "group" | "dm";
 
 const Chat = () => {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [chatTab, setChatTab] = useState<ChatTab>("group");
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`chat-dm-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages", filter: `receiver_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["dm-threads", user.id] }))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages", filter: `sender_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["dm-threads", user.id] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, qc]);
 
   const { data: groups, isLoading: gLoading } = useQuery({
     queryKey: ["chat-groups", user?.id],
