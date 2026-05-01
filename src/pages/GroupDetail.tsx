@@ -48,6 +48,27 @@ const GroupDetail = () => {
     },
   });
 
+  const { data: bookmark } = useQuery({
+    queryKey: ["bookmark-group", id, user?.id],
+    enabled: !!id && !!user,
+    queryFn: async () => (await supabase.from("bookmarks").select("id").eq("user_id", user!.id).eq("target_type", "group").eq("target_id", id!).maybeSingle()).data,
+  });
+  const liked = !!bookmark;
+
+  const toggleBookmark = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("로그인이 필요합니다");
+      if (bookmark) {
+        const { error } = await supabase.from("bookmarks").delete().eq("id", bookmark.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bookmarks").insert({ user_id: user.id, target_type: "group", target_id: id! });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmark-group", id, user?.id] }),
+  });
+
   const { data: reviews } = useQuery({
     queryKey: ["group-reviews", id],
     enabled: !!id,
