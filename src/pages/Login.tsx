@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +15,9 @@ const Login = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -28,15 +32,28 @@ const Login = () => {
     setSubmitting(true);
     try {
       if (mode === "signup") {
+        if (!agreeTerms || !agreePrivacy) {
+          throw new Error("필수 약관에 동의해 주세요");
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { name: name || email.split("@")[0] },
+            data: { name: name || email.split("@")[0], referral_code: referralCode.trim() || null },
           },
         });
         if (error) throw error;
+
+        // 추천 코드 처리: referral_code(=referrer 사용자 id)로 referrals 적립
+        const { data: session } = await supabase.auth.getSession();
+        const newUserId = session.session?.user.id;
+        if (newUserId && referralCode.trim()) {
+          await supabase.from("referrals").insert({
+            referrer_id: referralCode.trim(),
+            referred_user_id: newUserId,
+          });
+        }
         toast({ title: "회원가입 완료", description: "이메일 인증 후 로그인할 수 있어요." });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -135,9 +152,34 @@ const Login = () => {
             />
           </div>
 
+          {mode === "signup" && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="ref" className="text-xs font-semibold">추천 코드 (선택)</Label>
+                <Input
+                  id="ref"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  placeholder="친구의 추천 코드"
+                  className="h-12 rounded-xl bg-muted border-0"
+                />
+              </div>
+              <div className="space-y-2 pt-2">
+                <label className="flex items-start gap-2 text-xs">
+                  <Checkbox checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(v === true)} className="mt-0.5" />
+                  <span><span className="text-destructive">[필수]</span> <span className="underline">서비스 이용약관</span>에 동의합니다</span>
+                </label>
+                <label className="flex items-start gap-2 text-xs">
+                  <Checkbox checked={agreePrivacy} onCheckedChange={(v) => setAgreePrivacy(v === true)} className="mt-0.5" />
+                  <span><span className="text-destructive">[필수]</span> <span className="underline">개인정보 처리방침</span>에 동의합니다</span>
+                </label>
+              </div>
+            </>
+          )}
+
           <Button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (mode === "signup" && (!agreeTerms || !agreePrivacy))}
             className="w-full h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-soft hover:opacity-95 mt-2"
           >
             {submitting ? "처리 중..." : mode === "login" ? "로그인" : "회원가입"}
