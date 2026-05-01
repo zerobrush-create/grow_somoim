@@ -748,6 +748,27 @@ export type Database = {
           },
         ]
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: number
+        }
+        Relationships: []
+      }
       group_messages: {
         Row: {
           content: string
@@ -1199,6 +1220,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: number
+          reason: string
+          reporter_id: string
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          reason: string
+          reporter_id: string
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          reason?: string
+          reporter_id?: string
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
+      search_history: {
+        Row: {
+          created_at: string
+          id: number
+          query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          query?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       site_content: {
         Row: {

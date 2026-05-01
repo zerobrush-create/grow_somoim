@@ -10,6 +10,9 @@ export type DbGroup = {
   description: string | null;
   max_members: number | null;
   members: number;
+  rating: number;
+  reviewCount: number;
+  created_at: string;
 };
 
 const categoryMap: Record<string, string> = {
@@ -37,6 +40,7 @@ export function useGroups() {
 
       const ids = (groups ?? []).map((g) => g.id);
       let counts: Record<string, number> = {};
+      let ratingMap: Record<string, { sum: number; count: number }> = {};
       if (ids.length) {
         const { data: members } = await supabase
           .from("memberships")
@@ -46,6 +50,14 @@ export function useGroups() {
         counts = (members ?? []).reduce<Record<string, number>>((acc, m) => {
           acc[m.group_id] = (acc[m.group_id] ?? 0) + 1;
           return acc;
+        }, {});
+        const { data: reviews } = await supabase
+          .from("group_reviews")
+          .select("group_id,rating")
+          .in("group_id", ids);
+        ratingMap = (reviews ?? []).reduce<Record<string, { sum: number; count: number }>>((acc, r) => {
+          const e = acc[r.group_id] ?? { sum: 0, count: 0 };
+          e.sum += r.rating; e.count += 1; acc[r.group_id] = e; return acc;
         }, {});
       }
 
@@ -58,6 +70,9 @@ export function useGroups() {
         description: g.description,
         max_members: g.max_members,
         members: counts[g.id] ?? 0,
+        rating: ratingMap[g.id] ? +(ratingMap[g.id].sum / ratingMap[g.id].count).toFixed(1) : 0,
+        reviewCount: ratingMap[g.id]?.count ?? 0,
+        created_at: g.created_at,
       }));
     },
   });

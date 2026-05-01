@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FollowButton } from "@/components/FollowButton";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -31,6 +33,17 @@ const PublicProfile = () => {
     },
   });
 
+  const { data: followers } = useQuery({
+    queryKey: ["followers", id],
+    enabled: !!id,
+    queryFn: async () => (await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", id!)).count ?? 0,
+  });
+  const { data: following } = useQuery({
+    queryKey: ["following", id],
+    enabled: !!id,
+    queryFn: async () => (await supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", id!)).count ?? 0,
+  });
+
   if (isLoading) return <div className="p-8"><Skeleton className="h-32 w-full" /></div>;
   if (!profile) return <div className="p-10 text-center text-sm text-muted-foreground">존재하지 않는 사용자예요</div>;
 
@@ -51,10 +64,36 @@ const PublicProfile = () => {
             {profile.mbti && <Badge className="mt-1">{profile.mbti}</Badge>}
             {profile.location && <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-2"><MapPin className="h-3 w-3" />{profile.location}</p>}
             {profile.bio && <p className="text-sm text-muted-foreground mt-3 whitespace-pre-line">{profile.bio}</p>}
+
+            <div className="flex justify-center gap-6 mt-4 text-sm">
+              <div className="text-center">
+                <p className="font-bold">{followers ?? 0}</p>
+                <p className="text-xs text-muted-foreground">팔로워</p>
+              </div>
+              <div className="text-center">
+                <p className="font-bold">{following ?? 0}</p>
+                <p className="text-xs text-muted-foreground">팔로잉</p>
+              </div>
+              <div className="text-center">
+                <p className="font-bold">{groups?.length ?? 0}</p>
+                <p className="text-xs text-muted-foreground">모임</p>
+              </div>
+            </div>
+
+            {!isMe && (
+              <div className="flex gap-2 mt-4">
+                <FollowButton targetUserId={profile.id} size="default" />
+                {user && (
+                  <Button variant="outline" onClick={() => navigate(`/dm/${profile.id}`)} className="flex-1">
+                    <MessageCircle className="h-4 w-4 mr-1" /> 메시지
+                  </Button>
+                )}
+              </div>
+            )}
             {!isMe && user && (
-              <Button onClick={() => navigate(`/dm/${profile.id}`)} className="mt-4 w-full">
-                <MessageCircle className="h-4 w-4 mr-1" /> 메시지 보내기
-              </Button>
+              <div className="mt-2 flex justify-end">
+                <ReportDialog targetType="user" targetId={profile.id} />
+              </div>
             )}
           </div>
 
