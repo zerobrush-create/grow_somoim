@@ -63,14 +63,14 @@ const Home = () => {
               <Link
                 key={c.id}
                 to="/groups"
-                className="flex flex-col items-center gap-2 group"
+                className="flex flex-col items-center gap-2 group active:scale-95 transition-smooth"
               >
                 <div
-                  className={`h-14 w-14 rounded-full ${c.bg} flex items-center justify-center transition-smooth group-hover:scale-105 group-hover:shadow-soft`}
+                  className={`h-14 w-14 rounded-2xl ${c.bg} flex items-center justify-center ring-1 ring-inset ring-black/[0.04] transition-smooth group-hover:scale-105 group-hover:shadow-soft`}
                 >
-                  <Icon className={`h-6 w-6 ${c.fg}`} strokeWidth={2} />
+                  <Icon className={`h-[26px] w-[26px] ${c.fg}`} strokeWidth={1.75} />
                 </div>
-                <span className="text-[12px] font-medium text-foreground">{c.label}</span>
+                <span className="text-[12px] font-medium text-foreground tracking-tight">{c.label}</span>
               </Link>
             );
           })}
