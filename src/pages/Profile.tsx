@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart } from "lucide-react";
+import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { Badge } from "@/components/ui/badge";
@@ -220,6 +220,11 @@ const Profile = () => {
           <button onClick={() => navigate("/bookmarks")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Heart className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium flex-1 text-left">찜한 모임</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button onClick={() => navigate("/attendance")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
+            <Award className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium flex-1 text-left">출석체크 · 뱃지</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
