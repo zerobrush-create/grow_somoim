@@ -14,6 +14,7 @@ const Profile = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -37,7 +38,6 @@ const Profile = () => {
   const { location, mbti, bio, interests, groupCount, classCount, points, referralCode } = userProfile;
   const name = profileName ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "회원";
   const myGroups = groups.slice(0, groupCount);
-  const [copied, setCopied] = useState(false);
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode).catch(() => {});
