@@ -8,7 +8,7 @@ const tabs = [
   { to: "/groups", label: "소모임", icon: Users },
   { to: "/classes", label: "클래스", icon: GraduationCap },
   { to: "/chat", label: "채팅", icon: MessageCircle },
-  { to: "/login", label: "내정보", icon: User },
+  { to: "/profile", label: "내정보", icon: User },
 ];
 
 export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) => {

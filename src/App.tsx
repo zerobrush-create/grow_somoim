@@ -8,8 +8,10 @@ import NotFound from "./pages/NotFound.tsx";
 import Groups from "./pages/Groups.tsx";
 import GroupDetail from "./pages/GroupDetail.tsx";
 import Classes from "./pages/Classes.tsx";
+import ClassDetail from "./pages/ClassDetail.tsx";
 import Chat from "./pages/Chat.tsx";
 import Login from "./pages/Login.tsx";
+import Profile from "./pages/Profile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -24,8 +26,10 @@ const App = () => (
           <Route path="/groups" element={<Groups />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/classes" element={<Classes />} />
+          <Route path="/classes/:id" element={<ClassDetail />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

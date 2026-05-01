@@ -37,7 +37,7 @@ const Classes = () => {
         {list.map((c) => (
           <a
             key={c.id}
-            href="#"
+            href={`/classes/${c.id}`}
             className="bg-card rounded-2xl overflow-hidden shadow-soft transition-smooth hover:shadow-card hover:-translate-y-0.5"
           >
             <div className="aspect-square overflow-hidden bg-muted">
