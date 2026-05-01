@@ -1003,6 +1003,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: number
+          is_read: boolean
+          link: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: number
+          is_read?: boolean
+          link?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: number
+          is_read?: boolean
+          link?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       points: {
         Row: {
           amount: number
@@ -1211,6 +1244,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           agreed_terms_at: string | null
@@ -1279,6 +1333,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_class_enrolled: {
         Args: { _class_id: number; _user_id: string }
         Returns: boolean
@@ -1297,6 +1359,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "instructor" | "member"
       attend_status: "attending" | "not_attending" | "maybe"
       banner_type: "promo" | "app_intro"
       class_status: "pending" | "approved" | "rejected"
@@ -1437,6 +1500,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "instructor", "member"],
       attend_status: ["attending", "not_attending", "maybe"],
       banner_type: ["promo", "app_intro"],
       class_status: ["pending", "approved", "rejected"],
