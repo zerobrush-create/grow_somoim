@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +44,34 @@ const Admin = () => {
     queryKey: ["admin-user-roles"],
     enabled: !!isAdmin,
     queryFn: async () => (await supabase.from("user_roles").select("id,user_id,role,created_at").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const { data: reports } = useQuery({
+    queryKey: ["admin-reports"],
+    enabled: !!isAdmin,
+    queryFn: async () => (await supabase.from("reports").select("*").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["admin-stats"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const [u, g, c, dm] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("groups").select("id", { count: "exact", head: true }),
+        supabase.from("classes").select("id", { count: "exact", head: true }),
+        supabase.from("direct_messages").select("id", { count: "exact", head: true }),
+      ]);
+      return { users: u.count ?? 0, groups: g.count ?? 0, classes: c.count ?? 0, dms: dm.count ?? 0 };
+    },
+  });
+
+  const updateReport = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const { error } = await supabase.from("reports").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast({ title: "처리 완료" }); qc.invalidateQueries({ queryKey: ["admin-reports"] }); },
   });
 
   const [grantId, setGrantId] = useState("");
@@ -131,13 +159,57 @@ const Admin = () => {
           <h1 className="text-base font-bold flex-1">관리자</h1>
         </header>
 
-        <Tabs defaultValue="instructors" className="p-4">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="instructors">강사 신청</TabsTrigger>
-            <TabsTrigger value="ads">광고 요청</TabsTrigger>
-            <TabsTrigger value="banners">배너</TabsTrigger>
-            <TabsTrigger value="roles">역할</TabsTrigger>
+        <Tabs defaultValue="stats" className="p-4">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="stats">통계</TabsTrigger>
+            <TabsTrigger value="reports">신고</TabsTrigger>
+            <TabsTrigger value="manage">관리</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats" className="mt-4 grid grid-cols-2 gap-2">
+            {[
+              { icon: UsersIcon, label: "전체 사용자", value: stats?.users, color: "bg-primary-soft text-primary" },
+              { icon: UsersIcon, label: "모임", value: stats?.groups, color: "bg-accent/10 text-accent" },
+              { icon: BookOpen, label: "클래스", value: stats?.classes, color: "bg-secondary text-secondary-foreground" },
+              { icon: MessageSquare, label: "DM", value: stats?.dms, color: "bg-muted text-foreground" },
+            ].map((s, i) => (
+              <div key={i} className="bg-card rounded-2xl p-4 border border-border">
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${s.color}`}><s.icon className="h-4 w-4" /></div>
+                <p className="text-2xl font-bold mt-2">{s.value ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-2 mt-4">
+            {reports?.length ? reports.map((r) => (
+              <div key={r.id} className="bg-card rounded-xl p-3 border border-border">
+                <div className="flex items-center gap-2">
+                  <Flag className="h-4 w-4 text-destructive" />
+                  <Badge variant={r.status === "pending" ? "secondary" : "outline"}>{r.status}</Badge>
+                  <Badge variant="outline" className="ml-auto">{r.target_type}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">신고자: {r.reporter_id}</p>
+                <p className="text-xs text-muted-foreground">대상: {r.target_id}</p>
+                <p className="text-sm mt-1 whitespace-pre-line">{r.reason}</p>
+                {r.status === "pending" && (
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" onClick={() => updateReport.mutate({ id: r.id, status: "resolved" })}>해결</Button>
+                    <Button size="sm" variant="outline" onClick={() => updateReport.mutate({ id: r.id, status: "rejected" })}>기각</Button>
+                  </div>
+                )}
+              </div>
+            )) : <p className="text-center text-sm text-muted-foreground py-8">신고 내역이 없어요</p>}
+          </TabsContent>
+
+          <TabsContent value="manage" className="mt-4">
+            <Tabs defaultValue="instructors">
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="instructors">강사</TabsTrigger>
+                <TabsTrigger value="ads">광고</TabsTrigger>
+                <TabsTrigger value="banners">배너</TabsTrigger>
+                <TabsTrigger value="roles">역할</TabsTrigger>
+              </TabsList>
 
           <TabsContent value="instructors" className="space-y-2 mt-4">
             {instructorApps?.length ? instructorApps.map((a) => (
@@ -209,6 +281,8 @@ const Admin = () => {
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => revokeRole.mutate(r.id)}>해제</Button>
               </div>
             )) : <p className="text-center text-sm text-muted-foreground py-6">역할 데이터가 없어요</p>}
+          </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>
