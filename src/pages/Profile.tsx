@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 
@@ -14,6 +15,7 @@ const Profile = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const unread = useUnreadNotifications();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -87,7 +89,10 @@ const Profile = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">내 정보</h1>
         <div className="flex gap-1">
-          <button onClick={() => navigate("/notifications")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="알림"><Bell className="h-5 w-5" /></button>
+          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-muted transition-smooth" aria-label="알림">
+            <Bell className="h-5 w-5" />
+            {unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
+          </button>
           <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="설정"><Settings className="h-5 w-5" /></button>
         </div>
       </header>
