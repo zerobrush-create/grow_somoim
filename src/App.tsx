@@ -35,6 +35,7 @@ import AdRequest from "./pages/AdRequest.tsx";
 import Stores from "./pages/Stores.tsx";
 import Bookmarks from "./pages/Bookmarks.tsx";
 import PublicProfile from "./pages/PublicProfile.tsx";
+import FollowList from "./pages/FollowList.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,8 @@ const App = () => (
           <Route path="/instructor/apply" element={<ProtectedRoute><InstructorApply /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireRole="admin"><Admin /></ProtectedRoute>} />
           <Route path="/users/:id" element={<PublicProfile />} />
+          <Route path="/users/:id/follows" element={<FollowList />} />
+          <Route path="/follows" element={<ProtectedRoute><FollowList /></ProtectedRoute>} />
           <Route path="/leaders" element={<LeaderBoard />} />
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />
