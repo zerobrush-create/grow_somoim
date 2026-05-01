@@ -818,6 +818,7 @@ export type Database = {
           name: string
           owner_id: string
           status: Database["public"]["Enums"]["group_status"]
+          tags: string[] | null
           updated_at: string
         }
         Insert: {
@@ -832,6 +833,7 @@ export type Database = {
           name: string
           owner_id: string
           status?: Database["public"]["Enums"]["group_status"]
+          tags?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -846,6 +848,7 @@ export type Database = {
           name?: string
           owner_id?: string
           status?: Database["public"]["Enums"]["group_status"]
+          tags?: string[] | null
           updated_at?: string
         }
         Relationships: [
