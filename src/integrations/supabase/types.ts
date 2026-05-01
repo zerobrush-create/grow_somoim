@@ -1279,6 +1279,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_class_enrolled: {
+        Args: { _class_id: number; _user_id: string }
+        Returns: boolean
+      }
+      is_class_instructor: {
+        Args: { _class_id: number; _user_id: string }
+        Returns: boolean
+      }
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean

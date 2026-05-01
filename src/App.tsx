@@ -13,6 +13,12 @@ import GroupEdit from "./pages/GroupEdit.tsx";
 import GroupRequests from "./pages/GroupRequests.tsx";
 import GroupChat from "./pages/GroupChat.tsx";
 import GroupEvents from "./pages/GroupEvents.tsx";
+import GroupBoard from "./pages/GroupBoard.tsx";
+import GroupPhotos from "./pages/GroupPhotos.tsx";
+import GroupAnnouncements from "./pages/GroupAnnouncements.tsx";
+import DirectMessage from "./pages/DirectMessage.tsx";
+import ClassCreate from "./pages/ClassCreate.tsx";
+import ClassChat from "./pages/ClassChat.tsx";
 import Classes from "./pages/Classes.tsx";
 import ClassDetail from "./pages/ClassDetail.tsx";
 import Chat from "./pages/Chat.tsx";
@@ -36,10 +42,16 @@ const App = () => (
           <Route path="/groups/:id/requests" element={<GroupRequests />} />
           <Route path="/groups/:id/chat" element={<GroupChat />} />
           <Route path="/groups/:id/events" element={<GroupEvents />} />
+          <Route path="/groups/:id/board" element={<GroupBoard />} />
+          <Route path="/groups/:id/photos" element={<GroupPhotos />} />
+          <Route path="/groups/:id/announcements" element={<GroupAnnouncements />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/classes" element={<Classes />} />
+          <Route path="/classes/new" element={<ClassCreate />} />
+          <Route path="/classes/:id/chat" element={<ClassChat />} />
           <Route path="/classes/:id" element={<ClassDetail />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/dm/:peerId" element={<DirectMessage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
