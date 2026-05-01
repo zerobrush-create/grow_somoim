@@ -24,6 +24,11 @@ import ClassDetail from "./pages/ClassDetail.tsx";
 import Chat from "./pages/Chat.tsx";
 import Login from "./pages/Login.tsx";
 import Profile from "./pages/Profile.tsx";
+import ProfileEdit from "./pages/ProfileEdit.tsx";
+import Notifications from "./pages/Notifications.tsx";
+import Points from "./pages/Points.tsx";
+import InstructorApply from "./pages/InstructorApply.tsx";
+import Admin from "./pages/Admin.tsx";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +59,11 @@ const App = () => (
           <Route path="/dm/:peerId" element={<DirectMessage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/edit" element={<ProfileEdit />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/points" element={<Points />} />
+          <Route path="/instructor/apply" element={<InstructorApply />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
