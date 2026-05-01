@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -40,6 +40,24 @@ const Home = () => {
   });
 
   const heroBanner = banners?.[0];
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin-home", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle();
+      return !!data;
+    },
+  });
+
+  const quickMenu = [
+    { to: "/points", label: "포인트", icon: Coins, color: "bg-amber-100 text-amber-700" },
+    { to: "/stores", label: "가맹점", icon: Store, color: "bg-emerald-100 text-emerald-700" },
+    { to: "/ads", label: "광고신청", icon: Megaphone, color: "bg-rose-100 text-rose-700" },
+    { to: "/leaders", label: "리더", icon: Crown, color: "bg-purple-100 text-purple-700" },
+    { to: "/instructor/apply", label: "강사신청", icon: GraduationCap, color: "bg-sky-100 text-sky-700" },
+    ...(isAdmin ? [{ to: "/admin", label: "관리자", icon: ShieldCheck, color: "bg-slate-100 text-slate-700" }] : []),
+  ];
 
   return (
     <MobileShell>
@@ -98,6 +116,20 @@ const Home = () => {
             <Link key={c.id} to="/groups" className="flex flex-col items-center gap-1.5 group">
               <div className="h-14 w-14 rounded-2xl bg-primary-soft flex items-center justify-center text-2xl transition-smooth group-hover:scale-105 group-hover:shadow-soft">{c.emoji}</div>
               <span className="text-xs font-medium text-foreground">{c.label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-4 pt-6">
+        <h3 className="text-xs font-bold text-muted-foreground mb-2">빠른 메뉴</h3>
+        <div className="grid grid-cols-5 gap-2">
+          {quickMenu.map((m) => (
+            <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
+                <m.icon className="h-5 w-5" />
+              </div>
+              <span className="text-[10px] font-medium text-foreground">{m.label}</span>
             </Link>
           ))}
         </div>
