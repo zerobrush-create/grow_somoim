@@ -82,6 +82,16 @@ const Login = () => {
     }
   };
 
+  const handleOAuth = async (provider: "kakao" | "github") => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/profile` },
+    });
+    if (error) {
+      toast({ title: `${provider} 로그인 실패`, description: error.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
@@ -212,6 +222,22 @@ const Login = () => {
               <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
             </svg>
             Google로 계속하기
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOAuth("kakao")}
+            className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
+            카카오로 계속하기
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOAuth("github")}
+            className="w-full h-12 rounded-xl bg-foreground text-background font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18.92-.26 1.9-.39 2.88-.39.98 0 1.96.13 2.88.39 2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.08 0 4.42-2.69 5.4-5.25 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.21.67.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+            GitHub로 계속하기
           </button>
         </div>
 
