@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MentionInput } from "@/components/MentionInput";
+import { ImageUploader } from "@/components/ImageUploader";
+import { HashtagText } from "@/components/HashtagText";
 
 type Post = {
   id: number;
@@ -31,6 +33,7 @@ const GroupBoard = () => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [openPostId, setOpenPostId] = useState<number | null>(null);
 
   const { data: group } = useQuery({
@@ -77,14 +80,17 @@ const GroupBoard = () => {
     mutationFn: async () => {
       if (!user || !id) throw new Error("로그인이 필요합니다");
       if (!title.trim() || !content.trim()) throw new Error("제목과 내용을 입력해주세요");
-      const { error } = await supabase.from("board_posts").insert({
+      const { data: post, error } = await supabase.from("board_posts").insert({
         group_id: id, author_id: user.id, title: title.trim(), content: content.trim(),
-      });
+      }).select("id").single();
       if (error) throw error;
+      if (post && images.length > 0) {
+        await supabase.from("post_images").insert(images.map((url) => ({ post_id: post.id, post_type: "board", image_url: url, uploader_id: user.id })));
+      }
     },
     onSuccess: () => {
       toast({ title: "게시글이 등록되었어요" });
-      setOpen(false); setTitle(""); setContent("");
+      setOpen(false); setTitle(""); setContent(""); setImages([]);
       qc.invalidateQueries({ queryKey: ["board-posts", id] });
     },
     onError: (e: Error) => toast({ title: "등록 실패", description: e.message, variant: "destructive" }),
@@ -136,9 +142,10 @@ const GroupBoard = () => {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader><DialogTitle>새 게시글</DialogTitle></DialogHeader>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[70vh] overflow-y-auto">
                 <Input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
-                <Textarea placeholder="내용을 입력하세요" value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
+                <Textarea placeholder="내용 입력 (#태그 사용 가능)" value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
+                <ImageUploader value={images} onChange={setImages} max={5} />
                 <Button onClick={() => create.mutate()} disabled={create.isPending} className="w-full gradient-primary">
                   {create.isPending ? "등록 중..." : "등록"}
                 </Button>
@@ -161,6 +168,10 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
   const { data: post } = useQuery({
     queryKey: ["board-post", postId],
     queryFn: async () => (await supabase.from("board_posts").select("*").eq("id", postId).maybeSingle()).data,
+  });
+  const { data: postImgs } = useQuery({
+    queryKey: ["board-post-images", postId],
+    queryFn: async () => (await supabase.from("post_images").select("image_url").eq("post_id", postId).eq("post_type", "board")).data ?? [],
   });
   const { data: comments } = useQuery({
     queryKey: ["board-comments", postId],
@@ -200,7 +211,16 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="pr-6">{post?.title ?? "..."}</DialogTitle></DialogHeader>
-        <p className="text-sm whitespace-pre-wrap text-foreground">{post?.content}</p>
+        <HashtagText text={post?.content ?? ""} className="text-sm whitespace-pre-wrap text-foreground" />
+        {postImgs && postImgs.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {postImgs.map((img, i) => (
+              <a key={i} href={img.image_url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden bg-muted">
+                <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-3 border-t border-b border-border py-2 text-sm">
           <button onClick={() => toggleLike.mutate()} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary">
             <Heart className={cn("h-4 w-4", liked && "fill-accent text-accent")} /> {likes?.length ?? 0}
@@ -211,7 +231,7 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
           {comments?.map((c) => (
             <div key={c.id} className="text-sm bg-muted rounded-lg px-3 py-2">
               <p className="text-[11px] text-muted-foreground mb-0.5">{new Date(c.created_at).toLocaleString("ko-KR")}</p>
-              <p>{c.content}</p>
+              <HashtagText text={c.content} />
             </div>
           ))}
         </div>
