@@ -1,20 +1,31 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, SlidersHorizontal, MapPin, Users, Plus } from "lucide-react";
+import { Search, MapPin, Users, Plus, X } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useGroups, mapCategoryFilter } from "@/hooks/useGroups";
 
+const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "온라인"];
+
 const Groups = () => {
   const [active, setActive] = useState("all");
+  const [query, setQuery] = useState("");
+  const [region, setRegion] = useState("전체");
   const { data: groups, isLoading, error } = useGroups();
 
   const filtered = (groups ?? []).filter((g) => {
-    if (active === "all") return true;
-    return g.category === mapCategoryFilter(active);
+    if (active !== "all" && g.category !== mapCategoryFilter(active)) return false;
+    if (region !== "전체" && !(g.location ?? "").includes(region)) return false;
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      const hay = `${g.name} ${g.description ?? ""} ${g.category} ${g.location ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
   });
 
   return (
@@ -22,12 +33,6 @@ const Groups = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border">
         <div className="flex items-center gap-2 mb-3">
           <h1 className="text-xl font-bold flex-1">소모임</h1>
-          <button className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="검색">
-            <Search className="h-5 w-5" />
-          </button>
-          <button className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="필터">
-            <SlidersHorizontal className="h-5 w-5" />
-          </button>
           <Link
             to="/groups/new"
             className="p-2 rounded-full hover:bg-muted transition-smooth"
@@ -35,6 +40,34 @@ const Groups = () => {
           >
             <Plus className="h-5 w-5" />
           </Link>
+        </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="모임 이름·설명·지역으로 검색"
+            className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 mb-2">
+          {LOCATIONS.map((l) => (
+            <button
+              key={l}
+              onClick={() => setRegion(l)}
+              className={cn(
+                "flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-smooth",
+                region === l ? "bg-foreground text-background" : "bg-muted text-foreground"
+              )}
+            >
+              {l}
+            </button>
+          ))}
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
           {categories.map((c) => (
