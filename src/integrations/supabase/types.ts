@@ -114,6 +114,54 @@ export type Database = {
           },
         ]
       }
+      attendance: {
+        Row: {
+          attended_on: string
+          created_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          attended_on?: string
+          created_at?: string
+          id?: number
+          user_id: string
+        }
+        Update: {
+          attended_on?: string
+          created_at?: string
+          id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      badges: {
+        Row: {
+          code: string
+          description: string | null
+          earned_at: string
+          id: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          description?: string | null
+          earned_at?: string
+          id?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          description?: string | null
+          earned_at?: string
+          id?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
@@ -877,6 +925,27 @@ export type Database = {
         }
         Relationships: []
       }
+      group_tags: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: number
+          tag: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: number
+          tag: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: number
+          tag?: string
+        }
+        Relationships: []
+      }
       groups: {
         Row: {
           category: string
@@ -1142,6 +1211,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      post_images: {
+        Row: {
+          created_at: string
+          id: number
+          image_url: string
+          post_id: number
+          post_type: string
+          uploader_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          image_url: string
+          post_id: number
+          post_type?: string
+          uploader_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          image_url?: string
+          post_id?: number
+          post_type?: string
+          uploader_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
