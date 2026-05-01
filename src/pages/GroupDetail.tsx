@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Share2, Heart, MapPin, Users, Calendar, MessageCircle, ThumbsUp, MessageSquare, Pin, Image, Bell, CheckCircle } from "lucide-react";
 import {
@@ -158,8 +158,8 @@ const GroupDetail = () => {
 };
 
 /* ── 소개 탭 ── */
-const IntroTab = ({ group }: { group: Group }) => (
-  <>
+const IntroTab = forwardRef<HTMLDivElement, { group: Group }>(({ group }, ref) => (
+  <div ref={ref}>
     <section className="px-4 pt-6">
       <h2 className="text-base font-bold mb-2">소모임 소개</h2>
       <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -204,20 +204,19 @@ const IntroTab = ({ group }: { group: Group }) => (
         </div>
       </div>
     </section>
-  </>
-);
+  </div>
+));
+IntroTab.displayName = "IntroTab";
 
 /* ── 이벤트 탭 ── */
-const EventsTab = ({
-  events,
-  statuses,
-  onStatusChange,
-}: {
+type EventsTabProps = {
   events: GroupEvent[];
   statuses: Record<string, EventStatus>;
   onStatusChange: (id: string, status: EventStatus) => void;
-}) => (
-  <div className="px-4 pt-4 space-y-3 pb-4">
+};
+const EventsTab = forwardRef<HTMLDivElement, EventsTabProps>(
+  ({ events, statuses, onStatusChange }, ref) => (
+  <div ref={ref} className="px-4 pt-4 space-y-3 pb-4">
     {events.length === 0 && (
       <div className="text-center py-16 text-muted-foreground text-sm">아직 이벤트가 없어요</div>
     )}
@@ -269,19 +268,18 @@ const EventsTab = ({
       );
     })}
   </div>
-);
+));
+EventsTab.displayName = "EventsTab";
 
 /* ── 게시판 탭 ── */
-const BoardTab = ({
-  posts,
-  likes,
-  onLike,
-}: {
+type BoardTabProps = {
   posts: BoardPost[];
   likes: Record<string, boolean>;
   onLike: (id: string) => void;
-}) => (
-  <div className="pt-4 pb-4 divide-y divide-border">
+};
+const BoardTab = forwardRef<HTMLDivElement, BoardTabProps>(
+  ({ posts, likes, onLike }, ref) => (
+  <div ref={ref} className="pt-4 pb-4 divide-y divide-border">
     {posts.length === 0 && (
       <div className="text-center py-16 text-muted-foreground text-sm px-4">아직 게시글이 없어요</div>
     )}
@@ -318,11 +316,12 @@ const BoardTab = ({
       </div>
     ))}
   </div>
-);
+));
+BoardTab.displayName = "BoardTab";
 
 /* ── 사진첩 탭 ── */
-const PhotosTab = ({ photos }: { photos: GroupPhoto[] }) => (
-  <div className="px-4 pt-4 pb-4">
+const PhotosTab = forwardRef<HTMLDivElement, { photos: GroupPhoto[] }>(({ photos }, ref) => (
+  <div ref={ref} className="px-4 pt-4 pb-4">
     {photos.length === 0 && (
       <div className="text-center py-16 text-muted-foreground text-sm">
         <Image className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -337,11 +336,12 @@ const PhotosTab = ({ photos }: { photos: GroupPhoto[] }) => (
       ))}
     </div>
   </div>
-);
+));
+PhotosTab.displayName = "PhotosTab";
 
 /* ── 공지 탭 ── */
-const NoticesTab = ({ notices }: { notices: Announcement[] }) => (
-  <div className="px-4 pt-4 pb-4 space-y-3">
+const NoticesTab = forwardRef<HTMLDivElement, { notices: Announcement[] }>(({ notices }, ref) => (
+  <div ref={ref} className="px-4 pt-4 pb-4 space-y-3">
     {notices.length === 0 && (
       <div className="text-center py-16 text-muted-foreground text-sm">
         <Bell className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -364,6 +364,7 @@ const NoticesTab = ({ notices }: { notices: Announcement[] }) => (
       </div>
     ))}
   </div>
-);
+));
+NoticesTab.displayName = "NoticesTab";
 
 export default GroupDetail;
