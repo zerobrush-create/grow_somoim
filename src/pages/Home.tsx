@@ -57,23 +57,18 @@ const Home = () => {
       {/* Categories */}
       <section className="px-4 pt-6">
         <div className="grid grid-cols-4 gap-3">
-          {categories.slice(0, 8).map((c) => {
-            const Icon = c.icon;
-            return (
-              <Link
-                key={c.id}
-                to="/groups"
-                className="flex flex-col items-center gap-2 group active:scale-95 transition-smooth"
-              >
-                <div
-                  className={`h-14 w-14 rounded-2xl ${c.bg} flex items-center justify-center ring-1 ring-inset ring-black/[0.04] transition-smooth group-hover:scale-105 group-hover:shadow-soft`}
-                >
-                  <Icon className={`h-[26px] w-[26px] ${c.fg}`} strokeWidth={1.75} />
-                </div>
-                <span className="text-[12px] font-medium text-foreground tracking-tight">{c.label}</span>
-              </Link>
-            );
-          })}
+          {categories.slice(0, 8).map((c) => (
+            <Link
+              key={c.id}
+              to="/groups"
+              className="flex flex-col items-center gap-1.5 group"
+            >
+              <div className="h-14 w-14 rounded-2xl bg-primary-soft flex items-center justify-center text-2xl transition-smooth group-hover:scale-105 group-hover:shadow-soft">
+                {c.emoji}
+              </div>
+              <span className="text-xs font-medium text-foreground">{c.label}</span>
+            </Link>
+          ))}
         </div>
       </section>
 

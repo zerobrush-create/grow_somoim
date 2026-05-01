@@ -26,25 +26,21 @@ const Groups = () => {
           </button>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-          {categories.map((c) => {
-            const Icon = c.icon;
-            const isActive = active === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => setActive(c.id)}
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-smooth active:scale-95",
-                  isActive
-                    ? "bg-foreground text-background shadow-soft"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted ring-1 ring-inset ring-black/[0.04]"
-                )}
-              >
-                <Icon className="h-4 w-4" strokeWidth={1.75} />
-                <span>{c.label}</span>
-              </button>
-            );
-          })}
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setActive(c.id)}
+              className={cn(
+                "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-smooth",
+                active === c.id
+                  ? "bg-primary text-primary-foreground shadow-soft"
+                  : "bg-muted text-foreground hover:bg-secondary"
+              )}
+            >
+              <span>{c.emoji}</span>
+              <span>{c.label}</span>
+            </button>
+          ))}
         </div>
       </header>
 
