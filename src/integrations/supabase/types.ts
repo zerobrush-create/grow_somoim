@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_feed: {
+        Row: {
+          created_at: string
+          id: number
+          link: string | null
+          meta: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          link?: string | null
+          meta?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          link?: string | null
+          meta?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ad_requests: {
         Row: {
           created_at: string
@@ -211,6 +241,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
       }
       board_comments: {
         Row: {
@@ -705,18 +756,21 @@ export type Database = {
           created_at: string
           event_id: string
           id: number
+          status: string
           user_id: string
         }
         Insert: {
           created_at?: string
           event_id: string
           id?: number
+          status?: string
           user_id: string
         }
         Update: {
           created_at?: string
           event_id?: string
           id?: number
+          status?: string
           user_id?: string
         }
         Relationships: [

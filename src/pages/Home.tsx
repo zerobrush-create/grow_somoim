@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -79,6 +79,7 @@ const Home = () => {
     { to: "/points", label: "포인트", icon: Coins, color: "bg-amber-100 text-amber-700" },
     { to: "/stores", label: "가맹점", icon: Store, color: "bg-emerald-100 text-emerald-700" },
     { to: "/recommendations", label: "추천", icon: Sparkles, color: "bg-pink-100 text-pink-700" },
+    { to: "/calendar", label: "캘린더", icon: CalendarDays, color: "bg-indigo-100 text-indigo-700" },
     { to: "/ads", label: "광고신청", icon: Megaphone, color: "bg-rose-100 text-rose-700" },
     { to: "/leaders", label: "리더", icon: Crown, color: "bg-purple-100 text-purple-700" },
     { to: "/instructor/apply", label: "강사신청", icon: GraduationCap, color: "bg-sky-100 text-sky-700" },
@@ -105,9 +106,9 @@ const Home = () => {
           </button>
         </div>
 
-        <Link to="/groups" className="flex items-center gap-2 bg-card rounded-2xl px-4 py-3 shadow-soft transition-smooth hover:shadow-card">
+        <Link to="/search" className="flex items-center gap-2 bg-card rounded-2xl px-4 py-3 shadow-soft transition-smooth hover:shadow-card">
           <Search className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">관심있는 소모임을 찾아보세요</span>
+          <span className="text-sm text-muted-foreground">모임, 클래스, 친구를 검색해보세요</span>
         </Link>
       </header>
 

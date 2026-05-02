@@ -64,7 +64,7 @@ const GroupEvents = () => {
     queryKey: ["event-attendees", id, eventIds.join(",")],
     enabled: eventIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("event_attendees").select("event_id,user_id").in("event_id", eventIds);
+      const { data } = await supabase.from("event_attendees").select("event_id,user_id,status").in("event_id", eventIds);
       return data ?? [];
     },
   });
@@ -96,23 +96,34 @@ const GroupEvents = () => {
   });
 
   const rsvp = useMutation({
-    mutationFn: async ({ eventId, going }: { eventId: string; going: boolean }) => {
+    mutationFn: async ({ eventId, status }: { eventId: string; status: "going" | "maybe" | "declined" | null }) => {
       if (!user) throw new Error("로그인이 필요합니다");
-      if (going) {
-        const { error } = await supabase.from("event_attendees").insert({ event_id: eventId, user_id: user.id });
-        if (error && !error.message.includes("duplicate")) throw error;
-      } else {
+      if (status === null) {
         const { error } = await supabase.from("event_attendees").delete().eq("event_id", eventId).eq("user_id", user.id);
         if (error) throw error;
+      } else {
+        // upsert
+        const { data: existing } = await supabase.from("event_attendees").select("id").eq("event_id", eventId).eq("user_id", user.id).maybeSingle();
+        if (existing) {
+          const { error } = await supabase.from("event_attendees").update({ status }).eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("event_attendees").insert({ event_id: eventId, user_id: user.id, status });
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["event-attendees", id] }),
     onError: (e: Error) => toast({ title: "처리 실패", description: e.message, variant: "destructive" }),
   });
 
-  const countFor = (eid: string) => (attendees ?? []).filter((a) => a.event_id === eid).length;
-  const isAttending = (eid: string) =>
-    !!user && (attendees ?? []).some((a) => a.event_id === eid && a.user_id === user.id);
+  const countFor = (eid: string, status?: string) =>
+    (attendees ?? []).filter((a) => a.event_id === eid && (!status || (a as any).status === status || (status === "going" && !(a as any).status))).length;
+  const myStatus = (eid: string): "going" | "maybe" | "declined" | null => {
+    if (!user) return null;
+    const a = (attendees ?? []).find((x) => x.event_id === eid && x.user_id === user.id);
+    return a ? (((a as any).status as any) ?? "going") : null;
+  };
 
   // Calendar grid helpers
   const year = cursor.getFullYear();
@@ -221,9 +232,9 @@ const GroupEvents = () => {
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : events && events.length > 0 ? (
             events.map((ev) => {
-              const attending = isAttending(ev.id);
-              const count = countFor(ev.id);
-              const full = ev.max_attendees != null && count >= ev.max_attendees && !attending;
+              const mine: "going" | "maybe" | "declined" | null = myStatus(ev.id);
+              const goingCount = countFor(ev.id, "going");
+              const full = ev.max_attendees != null && goingCount >= ev.max_attendees && mine !== "going";
               return (
                 <div key={ev.id} className="rounded-xl border border-border p-4 space-y-2">
                   <h3 className="font-bold">{ev.title}</h3>
@@ -235,20 +246,18 @@ const GroupEvents = () => {
                     {ev.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{ev.location}</span>}
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
-                      {count}{ev.max_attendees ? `/${ev.max_attendees}` : ""}
+                      참석 {goingCount}{ev.max_attendees ? `/${ev.max_attendees}` : ""} · 미정 {countFor(ev.id, "maybe")}
                     </span>
                   </div>
                   {ev.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{ev.description}</p>}
                   {user && (
-                    <Button
-                      size="sm"
-                      variant={attending ? "outline" : "default"}
-                      onClick={() => rsvp.mutate({ eventId: ev.id, going: !attending })}
-                      disabled={rsvp.isPending || full}
-                      className="w-full"
-                    >
-                      {attending ? "참석 취소" : full ? "정원 마감" : "참석할게요"}
-                    </Button>
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      <Button size="sm" variant={mine === "going" ? "default" : "outline"} disabled={rsvp.isPending || full} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "going" ? null : "going" })}>
+                        {full && (mine as string) !== "going" ? "마감" : "참석"}
+                      </Button>
+                      <Button size="sm" variant={mine === "maybe" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "maybe" ? null : "maybe" })}>미정</Button>
+                      <Button size="sm" variant={mine === "declined" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "declined" ? null : "declined" })}>불참</Button>
+                    </div>
                   )}
                 </div>
               );
