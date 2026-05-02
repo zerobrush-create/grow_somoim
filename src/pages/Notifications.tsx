@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PushToggle } from "@/components/PushToggle";
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const Notifications = () => {
           </button>
           <h1 className="text-base font-bold flex-1">알림</h1>
         </header>
+        <PushToggle />
         <div className="divide-y divide-border">
           {isLoading ? (
             <div className="p-4 space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
