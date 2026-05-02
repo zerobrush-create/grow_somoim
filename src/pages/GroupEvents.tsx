@@ -232,7 +232,7 @@ const GroupEvents = () => {
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : events && events.length > 0 ? (
             events.map((ev) => {
-              const mine = myStatus(ev.id);
+              const mine: "going" | "maybe" | "declined" | null = myStatus(ev.id);
               const goingCount = countFor(ev.id, "going");
               const full = ev.max_attendees != null && goingCount >= ev.max_attendees && mine !== "going";
               return (
