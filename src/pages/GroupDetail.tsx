@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, MapPin, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar, Star } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
+import { MapLink } from "@/components/MapLink";
 
 type Tab = "intro" | "events" | "board" | "photos" | "notices" | "reviews";
 
@@ -211,9 +212,7 @@ const GroupDetail = () => {
             {user && !isOwner && <ReportDialog targetType="group" targetId={group.id} />}
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-            {group.location && (
-              <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {group.location}</span>
-            )}
+            {group.location && <MapLink location={group.location} className="text-sm text-muted-foreground" />}
             <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {group.members}명</span>
           </div>
         </div>

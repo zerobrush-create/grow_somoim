@@ -2,17 +2,19 @@ import { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Users, GraduationCap, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const tabs = [
-  { to: "/", label: "홈", icon: Home },
-  { to: "/groups", label: "소모임", icon: Users },
-  { to: "/classes", label: "클래스", icon: GraduationCap },
-  { to: "/chat", label: "채팅", icon: MessageCircle },
-  { to: "/profile", label: "내정보", icon: User },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) => {
   const location = useLocation();
+  const { t } = useLanguage();
+
+  const tabs = [
+    { to: "/", label: t.nav.home, icon: Home },
+    { to: "/groups", label: t.nav.groups, icon: Users },
+    { to: "/classes", label: t.nav.classes, icon: GraduationCap },
+    { to: "/chat", label: t.nav.chat, icon: MessageCircle },
+    { to: "/profile", label: t.nav.profile, icon: User },
+  ];
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md min-h-screen bg-background relative pb-20">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award, Sun, Moon, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ const Profile = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const unread = useUnreadNotifications();
   const { resolvedTheme, setTheme } = useTheme();
+  const { lang, setLang } = useLanguage();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -104,6 +106,9 @@ const Profile = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">내 정보</h1>
         <div className="flex gap-1">
+          <button onClick={() => setLang(lang === "ko" ? "en" : "ko")} className="p-2 rounded-full hover:bg-muted transition-smooth text-xs font-bold w-9 h-9 flex items-center justify-center" aria-label="언어 변경">
+            {lang === "ko" ? "EN" : "한"}
+          </button>
           <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="다크모드 토글">
             {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, MoreVertical, ShieldOff, Flag } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, ShieldOff, Paperclip } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,9 @@ const DirectMessage = () => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [peerLastSeen, setPeerLastSeen] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [peerTyping, setPeerTyping] = useState(false);
   const [peerOnline, setPeerOnline] = useState(false);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -75,7 +77,17 @@ const DirectMessage = () => {
     typingChannelRef.current = ch;
     ch.on("presence", { event: "sync" }, () => {
       const state = ch.presenceState();
-      setPeerOnline(!!state[peerId]);
+      const peerPresence = state[peerId] as Array<{ online_at?: string }> | undefined;
+      const isOnline = !!peerPresence?.length;
+      setPeerOnline(isOnline);
+      if (!isOnline) {
+        const stored = localStorage.getItem(`grow_last_seen_${peerId}`);
+        if (stored) setPeerLastSeen(stored);
+      } else {
+        const onlineAt = peerPresence?.[0]?.online_at;
+        if (onlineAt) localStorage.setItem(`grow_last_seen_${peerId}`, onlineAt);
+        setPeerLastSeen(null);
+      }
     });
     ch.on("broadcast", { event: "typing" }, (payload) => {
       const sId = (payload.payload as { userId: string }).userId;
@@ -117,6 +129,22 @@ const DirectMessage = () => {
     });
   }, [messages, user, peerId, qc]);
 
+  const uploadFile = useMutation({
+    mutationFn: async (file: File) => {
+      if (!user || !peerId) throw new Error("로그인이 필요합니다");
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `dm/${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("chat-files").upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("chat-files").getPublicUrl(path);
+      const { error } = await supabase.from("direct_messages").insert({
+        sender_id: user.id, receiver_id: peerId, content: `[img:${publicUrl}]`,
+      });
+      if (error) throw error;
+    },
+    onError: (e: Error) => toast({ title: "파일 전송 실패", description: e.message, variant: "destructive" }),
+  });
+
   const blockUser = useMutation({
     mutationFn: async () => {
       if (!user || !peerId) throw new Error("로그인이 필요합니다");
@@ -157,7 +185,7 @@ const DirectMessage = () => {
             <h1 className="text-base font-bold truncate">{peer?.name ?? peer?.email ?? "사용자"}</h1>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <span className={cn("h-1.5 w-1.5 rounded-full inline-block", peerOnline ? "bg-emerald-500" : "bg-muted-foreground/40")} />
-              {peerOnline ? "온라인" : "오프라인"}
+              {peerOnline ? "온라인" : peerLastSeen ? `마지막 접속 ${new Date(peerLastSeen).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : "오프라인"}
             </p>
           </div>
           <DropdownMenu>
@@ -205,9 +233,13 @@ const DirectMessage = () => {
               return (
                 <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
-                    <div className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words", mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>
-                      {m.content}
-                    </div>
+                    {m.content.startsWith("[img:") ? (
+                      <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
+                    ) : (
+                      <div className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words", mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>
+                        {m.content}
+                      </div>
+                    )}
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -231,6 +263,10 @@ const DirectMessage = () => {
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile.mutate(f); e.target.value = ""; }} />
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadFile.isPending} className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground" aria-label="이미지 첨부">
+            <Paperclip className="h-4 w-4" />
+          </button>
           <Input value={text} onChange={(e) => { setText(e.target.value); broadcastTyping(); }} placeholder="메시지 입력..." maxLength={1000} />
           <Button type="submit" size="icon" disabled={send.isPending || !text.trim()} aria-label="전송">
             <Send className="h-4 w-4" />

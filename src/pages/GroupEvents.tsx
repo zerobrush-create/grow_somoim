@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Plus, Users, List, CalendarDays } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Plus, Users, List, CalendarDays, Bell, BellOff } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { MapLink } from "@/components/MapLink";
+import { useEventReminder } from "@/hooks/useEventReminder";
 
 type EventRow = {
   id: string;
@@ -116,6 +118,9 @@ const GroupEvents = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["event-attendees", id] }),
     onError: (e: Error) => toast({ title: "처리 실패", description: e.message, variant: "destructive" }),
   });
+
+  const { hasReminder, toggleReminder } = useEventReminder();
+  const [, forceUpdate] = useState(0);
 
   const countFor = (eid: string, status?: string) =>
     (attendees ?? []).filter((a) => a.event_id === eid && (!status || (a as any).status === status || (status === "going" && !(a as any).status))).length;
@@ -237,13 +242,23 @@ const GroupEvents = () => {
               const full = ev.max_attendees != null && goingCount >= ev.max_attendees && mine !== "going";
               return (
                 <div key={ev.id} className="rounded-xl border border-border p-4 space-y-2">
-                  <h3 className="font-bold">{ev.title}</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold">{ev.title}</h3>
+                    <button
+                      onClick={async () => { await toggleReminder({ eventId: ev.id, title: ev.title, startsAt: ev.starts_at }); forceUpdate((n) => n + 1); }}
+                      className={cn("p-1.5 rounded-full hover:bg-muted flex-shrink-0", hasReminder(ev.id) ? "text-primary" : "text-muted-foreground")}
+                      aria-label={hasReminder(ev.id) ? "리마인더 해제" : "리마인더 설정"}
+                      title={hasReminder(ev.id) ? "리마인더 해제" : "1시간 전 알림 설정"}
+                    >
+                      {hasReminder(ev.id) ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <CalendarIcon className="h-3.5 w-3.5" />
                       {new Date(ev.starts_at).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}
                     </span>
-                    {ev.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{ev.location}</span>}
+                    {ev.location && <MapLink location={ev.location} className="text-xs text-muted-foreground" />}
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
                       참석 {goingCount}{ev.max_attendees ? `/${ev.max_attendees}` : ""} · 미정 {countFor(ev.id, "maybe")}

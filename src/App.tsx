@@ -6,6 +6,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ReminderChecker } from "@/components/ReminderChecker";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RealtimeNotifier } from "./components/RealtimeNotifier";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -73,6 +75,7 @@ const RouteFallback = () => (
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+  <LanguageProvider>
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -82,6 +85,7 @@ const App = () => (
         <AuthProvider>
           <RealtimeNotifier />
           <OnboardingTour />
+          <ReminderChecker />
           <Suspense fallback={<RouteFallback />}>
           <Routes>
           <Route path="/" element={<Index />} />
@@ -134,6 +138,7 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
   </ErrorBoundary>
+  </LanguageProvider>
   </ThemeProvider>
 );
 
