@@ -44,10 +44,12 @@ import MyCalendar from "./pages/MyCalendar.tsx";
 import BlockedUsers from "./pages/BlockedUsers.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RealtimeNotifier } from "./components/RealtimeNotifier";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -101,6 +103,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
