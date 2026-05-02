@@ -1,52 +1,71 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Groups from "./pages/Groups.tsx";
-import GroupDetail from "./pages/GroupDetail.tsx";
-import GroupCreate from "./pages/GroupCreate.tsx";
-import GroupEdit from "./pages/GroupEdit.tsx";
-import GroupRequests from "./pages/GroupRequests.tsx";
-import GroupChat from "./pages/GroupChat.tsx";
-import GroupEvents from "./pages/GroupEvents.tsx";
-import GroupBoard from "./pages/GroupBoard.tsx";
-import GroupPhotos from "./pages/GroupPhotos.tsx";
-import GroupAnnouncements from "./pages/GroupAnnouncements.tsx";
-import DirectMessage from "./pages/DirectMessage.tsx";
-import ClassCreate from "./pages/ClassCreate.tsx";
-import ClassChat from "./pages/ClassChat.tsx";
-import Classes from "./pages/Classes.tsx";
-import ClassDetail from "./pages/ClassDetail.tsx";
-import Chat from "./pages/Chat.tsx";
-import Login from "./pages/Login.tsx";
-import Profile from "./pages/Profile.tsx";
-import ProfileEdit from "./pages/ProfileEdit.tsx";
-import Notifications from "./pages/Notifications.tsx";
-import Points from "./pages/Points.tsx";
-import InstructorApply from "./pages/InstructorApply.tsx";
-import Admin from "./pages/Admin.tsx";
-import LeaderBoard from "./pages/LeaderBoard.tsx";
-import ClassBoard from "./pages/ClassBoard.tsx";
-import AdRequest from "./pages/AdRequest.tsx";
-import Stores from "./pages/Stores.tsx";
-import Bookmarks from "./pages/Bookmarks.tsx";
-import PublicProfile from "./pages/PublicProfile.tsx";
-import FollowList from "./pages/FollowList.tsx";
-import Recommendations from "./pages/Recommendations.tsx";
-import TagSearch from "./pages/TagSearch.tsx";
-import Attendance from "./pages/Attendance.tsx";
-import Search from "./pages/Search.tsx";
-import MyCalendar from "./pages/MyCalendar.tsx";
-import BlockedUsers from "./pages/BlockedUsers.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RealtimeNotifier } from "./components/RealtimeNotifier";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { OnboardingTour } from "./components/OnboardingTour";
+import Index from "./pages/Index.tsx";
+import Login from "./pages/Login.tsx";
+import NotFound from "./pages/NotFound.tsx";
 
-const queryClient = new QueryClient();
+// Lazy-loaded routes — split into chunks for faster initial load
+const Groups = lazy(() => import("./pages/Groups.tsx"));
+const GroupDetail = lazy(() => import("./pages/GroupDetail.tsx"));
+const GroupCreate = lazy(() => import("./pages/GroupCreate.tsx"));
+const GroupEdit = lazy(() => import("./pages/GroupEdit.tsx"));
+const GroupRequests = lazy(() => import("./pages/GroupRequests.tsx"));
+const GroupChat = lazy(() => import("./pages/GroupChat.tsx"));
+const GroupEvents = lazy(() => import("./pages/GroupEvents.tsx"));
+const GroupBoard = lazy(() => import("./pages/GroupBoard.tsx"));
+const GroupPhotos = lazy(() => import("./pages/GroupPhotos.tsx"));
+const GroupAnnouncements = lazy(() => import("./pages/GroupAnnouncements.tsx"));
+const DirectMessage = lazy(() => import("./pages/DirectMessage.tsx"));
+const ClassCreate = lazy(() => import("./pages/ClassCreate.tsx"));
+const ClassChat = lazy(() => import("./pages/ClassChat.tsx"));
+const Classes = lazy(() => import("./pages/Classes.tsx"));
+const ClassDetail = lazy(() => import("./pages/ClassDetail.tsx"));
+const Chat = lazy(() => import("./pages/Chat.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const ProfileEdit = lazy(() => import("./pages/ProfileEdit.tsx"));
+const Notifications = lazy(() => import("./pages/Notifications.tsx"));
+const Points = lazy(() => import("./pages/Points.tsx"));
+const InstructorApply = lazy(() => import("./pages/InstructorApply.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
+const LeaderBoard = lazy(() => import("./pages/LeaderBoard.tsx"));
+const ClassBoard = lazy(() => import("./pages/ClassBoard.tsx"));
+const AdRequest = lazy(() => import("./pages/AdRequest.tsx"));
+const Stores = lazy(() => import("./pages/Stores.tsx"));
+const Bookmarks = lazy(() => import("./pages/Bookmarks.tsx"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile.tsx"));
+const FollowList = lazy(() => import("./pages/FollowList.tsx"));
+const Recommendations = lazy(() => import("./pages/Recommendations.tsx"));
+const TagSearch = lazy(() => import("./pages/TagSearch.tsx"));
+const Attendance = lazy(() => import("./pages/Attendance.tsx"));
+const Search = lazy(() => import("./pages/Search.tsx"));
+const MyCalendar = lazy(() => import("./pages/MyCalendar.tsx"));
+const BlockedUsers = lazy(() => import("./pages/BlockedUsers.tsx"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+  </div>
+);
 
 const App = () => (
   <ErrorBoundary>
@@ -57,6 +76,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <RealtimeNotifier />
+          <OnboardingTour />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/groups" element={<Groups />} />
@@ -99,6 +120,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
