@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FollowButton } from "@/components/FollowButton";
 import { ReportDialog } from "@/components/ReportDialog";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { BlockButton } from "@/components/BlockButton";
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -93,6 +95,7 @@ const PublicProfile = () => {
             {!isMe && user && (
               <div className="mt-2 flex justify-end">
                 <ReportDialog targetType="user" targetId={profile.id} />
+                <BlockButton targetUserId={profile.id} />
               </div>
             )}
           </div>
@@ -119,6 +122,11 @@ const PublicProfile = () => {
               </div>
             </div>
           )}
+
+          <div className="mt-5">
+            <h3 className="text-sm font-bold mb-2">활동</h3>
+            <ActivityFeed userId={profile.id} />
+          </div>
         </section>
       </div>
     </div>
