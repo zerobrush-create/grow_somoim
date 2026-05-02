@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp, Search as SearchIcon, UserCog } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -133,6 +133,21 @@ const Admin = () => {
 
   const [grantId, setGrantId] = useState("");
   const [grantRole, setGrantRole] = useState<"admin" | "instructor" | "member">("instructor");
+
+  const [userSearch, setUserSearch] = useState("");
+  const { data: foundUsers } = useQuery({
+    queryKey: ["admin-user-search", userSearch],
+    enabled: !!isAdmin && userSearch.trim().length >= 2,
+    queryFn: async () => {
+      const term = `%${userSearch.trim()}%`;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id,email,name,nickname,location,created_at")
+        .or(`nickname.ilike.${term},email.ilike.${term},name.ilike.${term}`)
+        .limit(20);
+      return data ?? [];
+    },
+  });
 
   const grantRoleMut = useMutation({
     mutationFn: async () => {
@@ -324,11 +339,12 @@ const Admin = () => {
 
           <TabsContent value="manage" className="mt-4">
             <Tabs defaultValue="instructors">
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="instructors">강사</TabsTrigger>
                 <TabsTrigger value="ads">광고</TabsTrigger>
                 <TabsTrigger value="banners">배너</TabsTrigger>
                 <TabsTrigger value="roles">역할</TabsTrigger>
+                <TabsTrigger value="users">유저</TabsTrigger>
               </TabsList>
 
           <TabsContent value="instructors" className="space-y-2 mt-4">
@@ -401,6 +417,47 @@ const Admin = () => {
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => revokeRole.mutate(r.id)}>해제</Button>
               </div>
             )) : <p className="text-center text-sm text-muted-foreground py-6">역할 데이터가 없어요</p>}
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-3 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border">
+              <div className="flex items-center gap-2">
+                <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="닉네임·이메일·이름 검색 (2자 이상)"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            {userSearch.trim().length >= 2 ? (
+              foundUsers && foundUsers.length > 0 ? (
+                foundUsers.map((u) => (
+                  <div key={u.id} className="bg-card rounded-xl p-3 border border-border">
+                    <div className="flex items-start gap-2">
+                      <div className="h-9 w-9 rounded-full bg-primary-soft text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        {(u.nickname ?? u.name ?? u.email ?? "?").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{u.nickname ?? u.name ?? "—"}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
+                        <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">{u.id}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/users/${u.id}`)} className="flex-1">프로필</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setGrantId(u.id); toast({ title: "역할 부여 폼에 추가되었어요" }); }} className="gap-1">
+                        <UserCog className="h-3.5 w-3.5" />역할
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-sm text-muted-foreground py-6">검색 결과가 없어요</p>
+              )
+            ) : (
+              <p className="text-center text-xs text-muted-foreground py-6">닉네임·이메일·이름을 입력해 검색하세요</p>
+            )}
           </TabsContent>
             </Tabs>
           </TabsContent>
