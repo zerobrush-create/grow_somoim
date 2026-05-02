@@ -253,7 +253,7 @@ const GroupEvents = () => {
                   {user && (
                     <div className="grid grid-cols-3 gap-1.5 pt-1">
                       <Button size="sm" variant={mine === "going" ? "default" : "outline"} disabled={rsvp.isPending || full} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "going" ? null : "going" })}>
-                        {full && mine !== "going" ? "마감" : "참석"}
+                        {full && (mine as string) !== "going" ? "마감" : "참석"}
                       </Button>
                       <Button size="sm" variant={mine === "maybe" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "maybe" ? null : "maybe" })}>미정</Button>
                       <Button size="sm" variant={mine === "declined" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "declined" ? null : "declined" })}>불참</Button>
