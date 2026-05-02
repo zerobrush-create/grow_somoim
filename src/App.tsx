@@ -39,7 +39,11 @@ import FollowList from "./pages/FollowList.tsx";
 import Recommendations from "./pages/Recommendations.tsx";
 import TagSearch from "./pages/TagSearch.tsx";
 import Attendance from "./pages/Attendance.tsx";
+import Search from "./pages/Search.tsx";
+import MyCalendar from "./pages/MyCalendar.tsx";
+import BlockedUsers from "./pages/BlockedUsers.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RealtimeNotifier } from "./components/RealtimeNotifier";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <RealtimeNotifier />
           <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/groups" element={<Groups />} />
@@ -82,6 +87,9 @@ const App = () => (
           <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
           <Route path="/tags/:tag" element={<TagSearch />} />
           <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/calendar" element={<ProtectedRoute><MyCalendar /></ProtectedRoute>} />
+          <Route path="/blocked" element={<ProtectedRoute><BlockedUsers /></ProtectedRoute>} />
           <Route path="/leaders" element={<LeaderBoard />} />
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />
