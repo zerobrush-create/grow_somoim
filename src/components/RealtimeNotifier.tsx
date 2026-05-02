@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +12,6 @@ import { toast } from "@/hooks/use-toast";
 export const RealtimeNotifier = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const subscribed = useRef<string | null>(null);
 
   useEffect(() => {
@@ -31,8 +29,7 @@ export const RealtimeNotifier = () => {
           toast({
             title: n.title ?? "새 알림",
             description: n.body ?? undefined,
-            onClick: n.link ? () => navigate(n.link) : undefined as any,
-          } as any);
+          });
           qc.invalidateQueries({ queryKey: ["unread-notif", user.id] });
           qc.invalidateQueries({ queryKey: ["notifications", user.id] });
         }
@@ -43,7 +40,7 @@ export const RealtimeNotifier = () => {
       subscribed.current = null;
       supabase.removeChannel(ch);
     };
-  }, [user, qc, navigate]);
+  }, [user, qc]);
 
   return null;
 };
