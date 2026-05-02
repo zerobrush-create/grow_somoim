@@ -217,6 +217,11 @@ const Profile = () => {
             <span className="text-sm font-medium flex-1 text-left">알림</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
+          <button onClick={() => navigate("/payment")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
+            <Coins className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium flex-1 text-left">포인트 결제 바코드</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
           <button onClick={() => navigate("/bookmarks")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Heart className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium flex-1 text-left">찜한 모임</span>

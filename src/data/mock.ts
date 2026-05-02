@@ -280,6 +280,39 @@ export const dmMessages = [
   { id: 3, sender: "지영", text: "좋아요~ 토요일 모임에서 봐요!", time: "오후 3:13", isMine: false },
 ];
 
+export type Store = {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  discount: string;
+};
+
+export type PointTransaction = {
+  id: string;
+  type: "earn" | "use" | "donate";
+  amount: number;
+  description: string;
+  date: string;
+};
+
+export const stores: Store[] = [
+  { id: "s1", name: "연남동 카페 봄날", category: "카페", address: "서울 마포구 연남동", discount: "음료 10% 할인" },
+  { id: "s2", name: "북클럽 서점 사이", category: "서점", address: "서울 마포구", discount: "도서 5% 할인" },
+  { id: "s3", name: "요가스튜디오 숨", category: "요가", address: "서울 성동구", discount: "클래스 1회 무료" },
+  { id: "s4", name: "도예공방 흙", category: "공방", address: "서울 용산구", discount: "재료비 20% 할인" },
+  { id: "s5", name: "힐링팜 레스토랑", category: "식당", address: "서울 강남구", discount: "식사 1인 무료" },
+];
+
+export const pointTransactions: PointTransaction[] = [
+  { id: "pt1", type: "earn", amount: 1000, description: "회원가입 보너스", date: "2025.04.01" },
+  { id: "pt2", type: "earn", amount: 500, description: "친구 초대 보너스 (지영)", date: "2025.04.10" },
+  { id: "pt3", type: "use", amount: 2000, description: "연남동 카페 봄날 결제", date: "2025.04.15" },
+  { id: "pt4", type: "earn", amount: 3000, description: "모임 활동 보너스", date: "2025.04.20" },
+  { id: "pt5", type: "use", amount: 500, description: "서점 사이 결제", date: "2025.04.25" },
+  { id: "pt6", type: "earn", amount: 2500, description: "클래스 수강 완료 보너스", date: "2025.05.01" },
+];
+
 export const userProfile: UserProfile = {
   name: "강원기",
   location: "서울 마포구",

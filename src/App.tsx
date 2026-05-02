@@ -49,6 +49,9 @@ const Attendance = lazy(() => import("./pages/Attendance.tsx"));
 const Search = lazy(() => import("./pages/Search.tsx"));
 const MyCalendar = lazy(() => import("./pages/MyCalendar.tsx"));
 const BlockedUsers = lazy(() => import("./pages/BlockedUsers.tsx"));
+const Payment = lazy(() => import("./pages/Payment.tsx"));
+const Terms = lazy(() => import("./pages/Terms.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +105,7 @@ const App = () => (
           <Route path="/profile/edit" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/points" element={<ProtectedRoute><Points /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
           <Route path="/instructor/apply" element={<ProtectedRoute><InstructorApply /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireRole="admin"><Admin /></ProtectedRoute>} />
           <Route path="/users/:id" element={<PublicProfile />} />
@@ -117,6 +121,8 @@ const App = () => (
           <Route path="/ads" element={<AdRequest />} />
           <Route path="/stores" element={<Stores />} />
           <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
