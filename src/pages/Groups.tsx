@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search, MapPin, Users, Plus, X, Star, History } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
@@ -11,6 +11,7 @@ import { useGroups, mapCategoryFilter } from "@/hooks/useGroups";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "온라인"];
 type SortKey = "recent" | "popular" | "rating";
@@ -19,6 +20,7 @@ const SORTS: { id: SortKey; label: string }[] = [
   { id: "popular", label: "인기순" },
   { id: "rating", label: "평점순" },
 ];
+const PAGE_SIZE = 12;
 
 const Groups = () => {
   const [active, setActive] = useState("all");
@@ -26,6 +28,8 @@ const Groups = () => {
   const [region, setRegion] = useState("전체");
   const [sort, setSort] = useState<SortKey>("recent");
   const [showHistory, setShowHistory] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const { data: groups, isLoading, error } = useGroups();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -54,6 +58,20 @@ const Groups = () => {
     setShowHistory(false);
   };
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [active, query, region, sort]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setVisibleCount((c) => c + PAGE_SIZE);
+    }, { rootMargin: "200px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const filtered = (groups ?? []).filter((g) => {
     if (active !== "all" && g.category !== mapCategoryFilter(active)) return false;
     if (region !== "전체" && !(g.location ?? "").includes(region)) return false;
@@ -68,6 +86,9 @@ const Groups = () => {
     if (sort === "rating") return b.rating - a.rating;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+
+  const visibleGroups = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
   return (
     <MobileShell>
@@ -183,7 +204,7 @@ const Groups = () => {
           </div>
         )}
 
-        {filtered.map((g) => (
+        {visibleGroups.map((g) => (
           <Link
             key={g.id}
             to={`/groups/${g.id}`}
@@ -192,7 +213,7 @@ const Groups = () => {
             <div className="flex gap-3 p-3">
               <div className="h-24 w-24 rounded-xl overflow-hidden bg-muted flex-shrink-0 relative flex items-center justify-center">
                 {g.image_url ? (
-                  <img src={g.image_url} alt={g.name} loading="lazy" className="h-full w-full object-cover" />
+                  <OptimizedImage src={g.image_url} alt={g.name} className="h-full w-full" />
                 ) : (
                   <Users className="h-8 w-8 text-muted-foreground/40" />
                 )}
@@ -223,6 +244,7 @@ const Groups = () => {
             </div>
           </Link>
         ))}
+        {hasMore && <div ref={sentinelRef} className="py-4 flex justify-center"><div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}
         <div className="h-4" />
       </div>
     </MobileShell>

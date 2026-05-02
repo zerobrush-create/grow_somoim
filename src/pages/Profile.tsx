@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award } from "lucide-react";
+import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award, Sun, Moon, Trash2 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +11,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const Profile = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const unread = useUnreadNotifications();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -84,11 +88,25 @@ const Profile = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const deleteAccount = async () => {
+    try {
+      await supabase.from("profiles").delete().eq("id", user!.id);
+      await signOut();
+      toast({ title: "탈퇴 완료", description: "계정이 삭제되었어요. 이용해주셔서 감사합니다." });
+      navigate("/login", { replace: true });
+    } catch {
+      toast({ title: "탈퇴 실패", description: "잠시 후 다시 시도해주세요.", variant: "destructive" });
+    }
+  };
+
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">내 정보</h1>
         <div className="flex gap-1">
+          <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="다크모드 토글">
+            {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
           <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-muted transition-smooth" aria-label="알림">
             <Bell className="h-5 w-5" />
             {unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
@@ -240,11 +258,31 @@ const Profile = () => {
         </div>
       </section>
 
-      <section className="px-4 pt-4 pb-4">
+      <section className="px-4 pt-4 pb-4 space-y-2">
         <Button variant="ghost" onClick={async () => { await signOut(); toast({ title: "로그아웃 되었어요" }); navigate("/login", { replace: true }); }} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
           <LogOut className="h-4 w-4 mr-2" />로그아웃
         </Button>
+        <Button variant="ghost" onClick={() => setDeleteDialogOpen(true)} className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/5 text-xs">
+          <Trash2 className="h-3.5 w-3.5 mr-1.5" />회원 탈퇴
+        </Button>
       </section>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정말 탈퇴하시겠어요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              탈퇴하면 프로필, 포인트, 참여 중인 모임 등 모든 정보가 삭제되며 복구할 수 없어요. 개인정보보호법에 따라 처리됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              탈퇴하기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="h-4" />
     </MobileShell>

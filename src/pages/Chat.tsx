@@ -41,6 +41,15 @@ const Chat = () => {
     },
   });
 
+  const { data: blockedIds } = useQuery({
+    queryKey: ["blocked-ids", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user!.id);
+      return new Set((data ?? []).map((b) => b.blocked_id as string));
+    },
+  });
+
   const { data: dmThreads, isLoading: dmLoading } = useQuery({
     queryKey: ["dm-threads", user?.id],
     enabled: !!user,
@@ -131,8 +140,8 @@ const Chat = () => {
         <div className="divide-y divide-border animate-fade-in">
           {dmLoading ? (
             <div className="p-4 space-y-3"><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
-          ) : dmThreads && dmThreads.length > 0 ? (
-            dmThreads.map((t) => (
+          ) : dmThreads && dmThreads.filter((t) => !blockedIds?.has(t.peerId)).length > 0 ? (
+            dmThreads.filter((t) => !blockedIds?.has(t.peerId)).map((t) => (
               <Link key={t.peerId} to={`/dm/${t.peerId}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={t.profile?.avatar_url ?? undefined} />

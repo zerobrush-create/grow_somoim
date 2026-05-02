@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, ShieldOff, Flag } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ReportDialog } from "@/components/ReportDialog";
 
 type DM = { id: number; content: string; sender_id: string; receiver_id: string; created_at: string; is_read: boolean };
 
@@ -19,6 +22,7 @@ const DirectMessage = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [peerTyping, setPeerTyping] = useState(false);
   const [peerOnline, setPeerOnline] = useState(false);
@@ -113,6 +117,19 @@ const DirectMessage = () => {
     });
   }, [messages, user, peerId, qc]);
 
+  const blockUser = useMutation({
+    mutationFn: async () => {
+      if (!user || !peerId) throw new Error("로그인이 필요합니다");
+      const { error } = await supabase.from("blocks").insert({ blocker_id: user.id, blocked_id: peerId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "차단되었어요", description: "해당 사용자의 메시지를 더 이상 받지 않습니다" });
+      navigate(-1);
+    },
+    onError: (e: Error) => toast({ title: "차단 실패", description: e.message, variant: "destructive" }),
+  });
+
   const send = useMutation({
     mutationFn: async () => {
       if (!user || !peerId) throw new Error("로그인이 필요합니다");
@@ -143,7 +160,41 @@ const DirectMessage = () => {
               {peerOnline ? "온라인" : "오프라인"}
             </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="더보기">
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setBlockDialogOpen(true)} className="text-destructive focus:text-destructive gap-2">
+                <ShieldOff className="h-4 w-4" /> 차단하기
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-2 p-0">
+                <div className="px-2 py-1.5">
+                  <ReportDialog targetType="user" targetId={peerId ?? ""} label="신고하기" />
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
+
+        <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>사용자를 차단할까요?</AlertDialogTitle>
+              <AlertDialogDescription>
+                차단하면 {peer?.name ?? "이 사용자"}의 메시지를 더 이상 받지 않습니다. 차단 목록은 내 정보에서 관리할 수 있어요.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction onClick={() => blockUser.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                차단
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           {isLoading ? (
