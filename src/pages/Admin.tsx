@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp, Search as SearchIcon, UserCog } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp, Search as SearchIcon, UserCog, Coins, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -210,6 +210,78 @@ const Admin = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-banners"] }),
   });
 
+  // 배너 생성
+  const [newBannerTitle, setNewBannerTitle] = useState("");
+  const [newBannerImageUrl, setNewBannerImageUrl] = useState("");
+  const [newBannerLinkUrl, setNewBannerLinkUrl] = useState("");
+  const [newBannerOrder, setNewBannerOrder] = useState("10");
+
+  const createBanner = useMutation({
+    mutationFn: async () => {
+      if (!newBannerTitle.trim()) throw new Error("제목을 입력하세요");
+      const { error } = await supabase.from("banners").insert({
+        title: newBannerTitle.trim(),
+        image_url: newBannerImageUrl.trim() || null,
+        link_url: newBannerLinkUrl.trim() || null,
+        order: parseInt(newBannerOrder) || 10,
+        type: "manual",
+        is_active: true,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "배너가 생성되었어요" });
+      setNewBannerTitle(""); setNewBannerImageUrl(""); setNewBannerLinkUrl(""); setNewBannerOrder("10");
+      qc.invalidateQueries({ queryKey: ["admin-banners"] });
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  // 모임 관리
+  const { data: allGroups } = useQuery({
+    queryKey: ["admin-groups"],
+    enabled: !!isAdmin,
+    queryFn: async () => (await supabase.from("groups").select("id,name,category,location,owner_id,created_at,member_count").order("created_at", { ascending: false }).limit(100)).data ?? [],
+  });
+
+  const [groupSearch, setGroupSearch] = useState("");
+
+  const deleteGroup = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("groups").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast({ title: "모임이 삭제되었어요" }); qc.invalidateQueries({ queryKey: ["admin-groups"] }); },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const filteredGroups = useMemo(() => {
+    const term = groupSearch.trim().toLowerCase();
+    return term ? (allGroups ?? []).filter((g) => g.name?.toLowerCase().includes(term) || g.category?.toLowerCase().includes(term)) : (allGroups ?? []);
+  }, [allGroups, groupSearch]);
+
+  // 포인트 지급
+  const [pointUserId, setPointUserId] = useState("");
+  const [pointAmount, setPointAmount] = useState("");
+  const [pointReason, setPointReason] = useState("");
+
+  const grantPoints = useMutation({
+    mutationFn: async () => {
+      if (!pointUserId.trim()) throw new Error("유저 ID를 입력하세요");
+      const amount = parseInt(pointAmount);
+      if (!amount || isNaN(amount)) throw new Error("포인트 금액을 입력하세요");
+      const { error } = await supabase.from("points").insert({
+        user_id: pointUserId.trim(),
+        amount,
+        reason: pointReason.trim() || "관리자 지급",
+        granted_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "포인트가 지급되었어요" });
+      setPointUserId(""); setPointAmount(""); setPointReason("");
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
   if (loading || roleLoading) return <div className="p-8 text-center text-sm text-muted-foreground">불러오는 중...</div>;
   if (!user || !isAdmin) {
     return (
@@ -339,12 +411,14 @@ const Admin = () => {
 
           <TabsContent value="manage" className="mt-4">
             <Tabs defaultValue="instructors">
-              <TabsList className="grid grid-cols-5 w-full">
-                <TabsTrigger value="instructors">강사</TabsTrigger>
-                <TabsTrigger value="ads">광고</TabsTrigger>
-                <TabsTrigger value="banners">배너</TabsTrigger>
-                <TabsTrigger value="roles">역할</TabsTrigger>
-                <TabsTrigger value="users">유저</TabsTrigger>
+              <TabsList className="flex w-full overflow-x-auto gap-0.5 h-auto p-1">
+                <TabsTrigger value="instructors" className="flex-shrink-0 text-xs px-3 py-1.5">강사</TabsTrigger>
+                <TabsTrigger value="ads" className="flex-shrink-0 text-xs px-3 py-1.5">광고</TabsTrigger>
+                <TabsTrigger value="banners" className="flex-shrink-0 text-xs px-3 py-1.5">배너</TabsTrigger>
+                <TabsTrigger value="roles" className="flex-shrink-0 text-xs px-3 py-1.5">역할</TabsTrigger>
+                <TabsTrigger value="users" className="flex-shrink-0 text-xs px-3 py-1.5">유저</TabsTrigger>
+                <TabsTrigger value="groups" className="flex-shrink-0 text-xs px-3 py-1.5">모임</TabsTrigger>
+                <TabsTrigger value="points" className="flex-shrink-0 text-xs px-3 py-1.5">포인트</TabsTrigger>
               </TabsList>
 
           <TabsContent value="instructors" className="space-y-2 mt-4">
@@ -382,6 +456,14 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="banners" className="space-y-2 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border space-y-2">
+              <p className="text-sm font-semibold">배너 직접 생성</p>
+              <Input placeholder="제목 *" value={newBannerTitle} onChange={(e) => setNewBannerTitle(e.target.value)} />
+              <Input placeholder="이미지 URL (선택)" value={newBannerImageUrl} onChange={(e) => setNewBannerImageUrl(e.target.value)} />
+              <Input placeholder="링크 URL (선택)" value={newBannerLinkUrl} onChange={(e) => setNewBannerLinkUrl(e.target.value)} />
+              <Input placeholder="순서 (기본 10)" type="number" value={newBannerOrder} onChange={(e) => setNewBannerOrder(e.target.value)} />
+              <Button size="sm" className="w-full" onClick={() => createBanner.mutate()} disabled={createBanner.isPending}>배너 생성</Button>
+            </div>
             {banners?.length ? banners.map((b) => (
               <div key={b.id} className="bg-card rounded-xl p-3 border border-border flex items-center gap-3">
                 {b.image_url && <img src={b.image_url} alt={b.title} className="h-12 w-12 rounded-lg object-cover" />}
@@ -394,7 +476,7 @@ const Admin = () => {
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => removeBanner.mutate(b.id)} className="text-destructive">삭제</Button>
               </div>
-            )) : <p className="text-center text-sm text-muted-foreground py-8">배너가 없어요</p>}
+            )) : <p className="text-center text-sm text-muted-foreground py-4">배너가 없어요</p>}
           </TabsContent>
 
           <TabsContent value="roles" className="space-y-3 mt-4">
@@ -449,6 +531,9 @@ const Admin = () => {
                       <Button size="sm" variant="outline" onClick={() => { setGrantId(u.id); toast({ title: "역할 부여 폼에 추가되었어요" }); }} className="gap-1">
                         <UserCog className="h-3.5 w-3.5" />역할
                       </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setPointUserId(u.id); toast({ title: "포인트 폼에 추가되었어요" }); }} className="gap-1">
+                        <Coins className="h-3.5 w-3.5" />포인트
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -458,6 +543,45 @@ const Admin = () => {
             ) : (
               <p className="text-center text-xs text-muted-foreground py-6">닉네임·이메일·이름을 입력해 검색하세요</p>
             )}
+          </TabsContent>
+
+          <TabsContent value="groups" className="space-y-3 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border">
+              <div className="flex items-center gap-2">
+                <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                <Input placeholder="모임명·카테고리 검색" value={groupSearch} onChange={(e) => setGroupSearch(e.target.value)} />
+              </div>
+            </div>
+            {filteredGroups.length > 0 ? filteredGroups.map((g) => (
+              <div key={g.id} className="bg-card rounded-xl p-3 border border-border flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{g.name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{g.category}{g.location ? ` · ${g.location}` : ""}</p>
+                  <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{g.id}</p>
+                </div>
+                {g.member_count != null && <Badge variant="secondary" className="flex-shrink-0">{g.member_count}명</Badge>}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive flex-shrink-0 gap-1"
+                  onClick={() => { if (window.confirm(`"${g.name}" 모임을 삭제할까요?`)) deleteGroup.mutate(g.id); }}
+                  disabled={deleteGroup.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />삭제
+                </Button>
+              </div>
+            )) : <p className="text-center text-sm text-muted-foreground py-8">모임이 없어요</p>}
+          </TabsContent>
+
+          <TabsContent value="points" className="space-y-3 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border space-y-2">
+              <p className="text-sm font-semibold flex items-center gap-1.5"><Coins className="h-4 w-4 text-primary" />포인트 지급</p>
+              <Input placeholder="유저 UUID *" value={pointUserId} onChange={(e) => setPointUserId(e.target.value)} />
+              <Input placeholder="포인트 (음수=차감) *" type="number" value={pointAmount} onChange={(e) => setPointAmount(e.target.value)} />
+              <Input placeholder="사유 (기본: 관리자 지급)" value={pointReason} onChange={(e) => setPointReason(e.target.value)} />
+              <Button size="sm" className="w-full" onClick={() => grantPoints.mutate()} disabled={grantPoints.isPending}>지급하기</Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center px-2">유저 검색 탭에서 포인트 버튼을 누르면 UUID가 자동 입력됩니다.</p>
           </TabsContent>
             </Tabs>
           </TabsContent>
