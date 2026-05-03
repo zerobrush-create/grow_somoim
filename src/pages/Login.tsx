@@ -39,7 +39,7 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (user) navigate("/profile", { replace: true });
+    if (user) navigate("/", { replace: true });
   }, [user, navigate]);
 
   const startResendCooldown = () => {
@@ -79,7 +79,7 @@ const Login = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast({ title: "환영해요!", description: "로그인되었어요." });
-        navigate("/profile", { replace: true });
+        navigate("/", { replace: true });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "잠시 후 다시 시도해 주세요.";
@@ -117,7 +117,7 @@ const Login = () => {
   const handleGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/profile` },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) toast({ title: "Google 로그인 실패", description: error.message, variant: "destructive" });
   };
@@ -125,7 +125,7 @@ const Login = () => {
   const handleOAuth = async (provider: "kakao") => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/profile` },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) toast({ title: `${provider} 로그인 실패`, description: error.message, variant: "destructive" });
   };

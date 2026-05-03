@@ -23,7 +23,7 @@ const Profile = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const unread = useUnreadNotifications();
   const { resolvedTheme, setTheme } = useTheme();
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -77,7 +77,7 @@ const Profile = () => {
   });
 
   if (loading) {
-    return <MobileShell><div className="px-4 pt-10 text-center text-sm text-muted-foreground">불러오는 중...</div></MobileShell>;
+    return <MobileShell><div className="px-4 pt-10 text-center text-sm text-muted-foreground">{t.common.loading}</div></MobileShell>;
   }
   if (!user) return <Navigate to="/login" replace />;
 
@@ -108,7 +108,7 @@ const Profile = () => {
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
-        <h1 className="text-xl font-bold">내 정보</h1>
+        <h1 className="text-xl font-bold">{t.profile.title}</h1>
         <div className="flex gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -163,17 +163,17 @@ const Profile = () => {
             <div className="text-center">
               <Users className="h-4 w-4 mx-auto text-primary" />
               <p className="text-lg font-bold mt-0.5">{groupCount ?? 0}</p>
-              <p className="text-[11px] text-muted-foreground">참여 모임</p>
+              <p className="text-[11px] text-muted-foreground">{t.profile.joinedGroups}</p>
             </div>
             <div className="text-center">
               <GraduationCap className="h-4 w-4 mx-auto text-primary" />
               <p className="text-lg font-bold mt-0.5">{classCount ?? 0}</p>
-              <p className="text-[11px] text-muted-foreground">수강 클래스</p>
+              <p className="text-[11px] text-muted-foreground">{t.profile.enrolledClasses}</p>
             </div>
             <div className="text-center">
               <Coins className="h-4 w-4 mx-auto text-primary" />
               <p className="text-lg font-bold mt-0.5">{(pointsTotal ?? 0).toLocaleString()}</p>
-              <p className="text-[11px] text-muted-foreground">포인트</p>
+              <p className="text-[11px] text-muted-foreground">{t.profile.points}</p>
             </div>
           </div>
         </div>
@@ -181,7 +181,7 @@ const Profile = () => {
 
       {profile?.interests && profile.interests.length > 0 && (
         <section className="px-4 pt-5">
-          <h3 className="text-sm font-bold mb-2.5">관심사</h3>
+          <h3 className="text-sm font-bold mb-2.5">{t.profile.interests}</h3>
           <div className="flex flex-wrap gap-2">
             {profile.interests.map((i) => (
               <Badge key={i} variant="secondary" className="bg-primary-soft text-primary border-0 px-3 py-1 text-xs font-medium">{i}</Badge>
@@ -196,9 +196,9 @@ const Profile = () => {
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10" />
             <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-xs text-white/80">보유 포인트</p>
+                <p className="text-xs text-white/80">{t.profile.myPoints}</p>
                 <p className="text-2xl font-bold mt-0.5">{(pointsTotal ?? 0).toLocaleString()} P</p>
-                <p className="text-[11px] text-white/70 mt-1">탭하여 내역 보기</p>
+                <p className="text-[11px] text-white/70 mt-1">{t.profile.tapForHistory}</p>
               </div>
               <Coins className="h-12 w-12 text-white/30" />
             </div>
@@ -208,25 +208,25 @@ const Profile = () => {
 
       <section className="px-4 pt-5">
         <div className="bg-card rounded-2xl p-4 shadow-soft border border-border">
-          <div className="flex items-center gap-2 mb-3"><Gift className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">친구 초대</h3></div>
-          <p className="text-xs text-muted-foreground mb-3">친구를 초대하면 포인트를 받을 수 있어요!</p>
+          <div className="flex items-center gap-2 mb-3"><Gift className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">{t.profile.inviteFriends}</h3></div>
+          <p className="text-xs text-muted-foreground mb-3">{t.profile.inviteDesc}</p>
           <div className="bg-muted rounded-xl px-3 py-2.5 mb-2">
-            <p className="text-[10px] text-muted-foreground mb-1">내 추천 코드</p>
+            <p className="text-[10px] text-muted-foreground mb-1">{t.profile.myCode}</p>
             <p className="font-mono text-base font-bold tracking-widest text-primary">{referralCode}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-muted/60 rounded-xl px-3 py-2 text-[11px] text-muted-foreground truncate">{referralLink}</div>
             <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0" aria-label="링크 복사"><Copy className="h-4 w-4" /></button>
           </div>
-          {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">링크가 복사되었어요!</p>}
+          {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">{t.profile.linkCopied}</p>}
         </div>
       </section>
 
       {myGroups && myGroups.length > 0 && (
         <section className="pt-5">
           <div className="px-4 flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">참여 중인 모임</h3>
-            <Link to="/groups" className="text-xs text-muted-foreground flex items-center">전체 <ChevronRight className="h-3 w-3" /></Link>
+            <h3 className="text-sm font-bold">{t.profile.myGroups}</h3>
+            <Link to="/groups" className="text-xs text-muted-foreground flex items-center">{t.profile.seeAll} <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="divide-y divide-border">
             {myGroups.map((g) => (
@@ -248,40 +248,40 @@ const Profile = () => {
           {!isInstructor && (
             <button onClick={() => navigate("/instructor/apply")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
               <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium flex-1 text-left">강사 신청</span>
+              <span className="text-sm font-medium flex-1 text-left">{t.profile.applyInstructor}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
           {isAdmin && (
             <button onClick={() => navigate("/admin")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium flex-1 text-left">관리자 페이지</span>
+              <span className="text-sm font-medium flex-1 text-left">{t.profile.adminPage}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
           <button onClick={() => navigate("/notifications")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Bell className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium flex-1 text-left">알림</span>
+            <span className="text-sm font-medium flex-1 text-left">{t.profile.notifications}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
           <button onClick={() => navigate("/payment")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Coins className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium flex-1 text-left">포인트 결제 바코드</span>
+            <span className="text-sm font-medium flex-1 text-left">{t.profile.pointBarcode}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
           <button onClick={() => navigate("/bookmarks")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Heart className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium flex-1 text-left">찜한 모임</span>
+            <span className="text-sm font-medium flex-1 text-left">{t.profile.savedGroups}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
           <button onClick={() => navigate("/attendance")} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium flex-1 text-left">출석체크 · 뱃지</span>
+            <span className="text-sm font-medium flex-1 text-left">{t.profile.attendance}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
             <Star className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium flex-1 text-left">내가 쓴 리뷰</span>
+            <span className="text-sm font-medium flex-1 text-left">{t.profile.myReviews}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
@@ -289,25 +289,25 @@ const Profile = () => {
 
       <section className="px-4 pt-4 pb-4 space-y-2">
         <Button variant="ghost" onClick={async () => { await signOut(); toast({ title: "로그아웃 되었어요" }); navigate("/login", { replace: true }); }} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
-          <LogOut className="h-4 w-4 mr-2" />로그아웃
+          <LogOut className="h-4 w-4 mr-2" />{t.profile.logout}
         </Button>
         <Button variant="ghost" onClick={() => setDeleteDialogOpen(true)} className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/5 text-xs">
-          <Trash2 className="h-3.5 w-3.5 mr-1.5" />회원 탈퇴
+          <Trash2 className="h-3.5 w-3.5 mr-1.5" />{t.profile.withdraw}
         </Button>
       </section>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>정말 탈퇴하시겠어요?</AlertDialogTitle>
+            <AlertDialogTitle>{t.profile.withdrawTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              탈퇴하면 프로필, 포인트, 참여 중인 모임 등 모든 정보가 삭제되며 복구할 수 없어요. 개인정보보호법에 따라 처리됩니다.
+              {t.profile.withdrawDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={deleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              탈퇴하기
+              {t.profile.withdrawConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
