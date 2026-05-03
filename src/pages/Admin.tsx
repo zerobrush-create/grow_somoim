@@ -224,7 +224,7 @@ const Admin = () => {
         image_url: newBannerImageUrl.trim() || null,
         link_url: newBannerLinkUrl.trim() || null,
         order: parseInt(newBannerOrder) || 10,
-        type: "manual",
+        type: "promo",
         is_active: true,
       });
       if (error) throw error;
@@ -241,7 +241,7 @@ const Admin = () => {
   const { data: allGroups } = useQuery({
     queryKey: ["admin-groups"],
     enabled: !!isAdmin,
-    queryFn: async () => (await supabase.from("groups").select("id,name,category,location,owner_id,created_at,member_count").order("created_at", { ascending: false }).limit(100)).data ?? [],
+    queryFn: async () => (await supabase.from("groups").select("id,name,category,location,owner_id,created_at").order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
 
   const [groupSearch, setGroupSearch] = useState("");
@@ -559,7 +559,6 @@ const Admin = () => {
                   <p className="text-[11px] text-muted-foreground truncate">{g.category}{g.location ? ` · ${g.location}` : ""}</p>
                   <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{g.id}</p>
                 </div>
-                {g.member_count != null && <Badge variant="secondary" className="flex-shrink-0">{g.member_count}명</Badge>}
                 <Button
                   size="sm"
                   variant="outline"

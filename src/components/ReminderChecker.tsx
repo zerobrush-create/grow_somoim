@@ -7,7 +7,7 @@ type Reminder = { eventId: string; title: string; startsAt: string };
 export const ReminderChecker = () => {
   useEffect(() => {
     const check = () => {
-      if (typeof window === "undefined" || Notification.permission !== "granted") return;
+      if (typeof window === "undefined" || typeof Notification === "undefined" || Notification.permission !== "granted") return;
       try {
         const reminders: Reminder[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
         const now = Date.now();

@@ -75,8 +75,8 @@ const RouteFallback = () => (
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-  <LanguageProvider>
   <ErrorBoundary>
+  <LanguageProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -137,8 +137,8 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-  </ErrorBoundary>
   </LanguageProvider>
+  </ErrorBoundary>
   </ThemeProvider>
 );
 

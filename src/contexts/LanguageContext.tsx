@@ -10,10 +10,17 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLangState] = useState<Language>(() => (localStorage.getItem("grow_lang") as Language) ?? "ko");
+  const [lang, setLangState] = useState<Language>(() => {
+    try {
+      const v = localStorage.getItem("grow_lang");
+      return (v === "ko" || v === "en") ? v : "ko";
+    } catch {
+      return "ko";
+    }
+  });
 
   const setLang = (l: Language) => {
-    localStorage.setItem("grow_lang", l);
+    try { localStorage.setItem("grow_lang", l); } catch {}
     setLangState(l);
   };
 
