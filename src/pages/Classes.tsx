@@ -9,25 +9,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const filters = ["전체", "공예", "쿠킹", "요가", "사진", "독서", "아웃도어"];
-const PRICE = ["전체", "무료", "유료"] as const;
 type SortKey = "recent" | "popular" | "rating";
-const SORTS: { id: SortKey; label: string }[] = [
-  { id: "recent", label: "최신순" },
-  { id: "popular", label: "인기순" },
-  { id: "rating", label: "평점순" },
-];
 
 const Classes = () => {
   const [active, setActive] = useState("전체");
   const [query, setQuery] = useState("");
-  const [price, setPrice] = useState<typeof PRICE[number]>("전체");
+  const [price, setPrice] = useState("전체");
   const [sort, setSort] = useState<SortKey>("recent");
   const [showHistory, setShowHistory] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { t } = useLanguage();
+
+  const CLASS_FILTERS = [
+    { id: "전체", label: t.classes.catAll },
+    { id: "공예", label: t.classes.catCraft },
+    { id: "쿠킹", label: t.classes.catCooking },
+    { id: "요가", label: t.classes.catYoga },
+    { id: "사진", label: t.classes.catPhoto },
+    { id: "독서", label: t.classes.catReading },
+    { id: "아웃도어", label: t.classes.catOutdoor },
+  ];
+
+  const PRICE_FILTERS = [
+    { id: "전체", label: t.classes.priceAll },
+    { id: "무료", label: t.classes.priceFree },
+    { id: "유료", label: t.classes.pricePaid },
+  ];
+
+  const SORTS: { id: SortKey; label: string }[] = [
+    { id: "recent", label: t.groups.sortRecent },
+    { id: "popular", label: t.groups.sortPopular },
+    { id: "rating", label: t.groups.sortRating },
+  ];
 
   const { data: list, isLoading } = useQuery({
     queryKey: ["classes", active],
@@ -101,14 +118,14 @@ const Classes = () => {
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border">
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-xl font-bold">클래스</h1>
+          <h1 className="text-xl font-bold">{t.nav.classes}</h1>
           {user && (
             <Button size="sm" onClick={() => navigate("/classes/new")} className="gradient-primary h-8">
-              <Plus className="h-4 w-4 mr-1" />클래스 개설
+              <Plus className="h-4 w-4 mr-1" />{t.classes.create}
             </Button>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mb-3">새로운 취미를 배워보세요</p>
+        <p className="text-xs text-muted-foreground mb-3">{t.classes.subtitle}</p>
         <form onSubmit={(e) => { e.preventDefault(); if (query.trim()) saveQuery.mutate(query); setShowHistory(false); }} className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -116,7 +133,7 @@ const Classes = () => {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setShowHistory(true)}
             onBlur={() => setTimeout(() => setShowHistory(false), 150)}
-            placeholder="클래스 검색"
+            placeholder={t.classes.searchPlaceholder}
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
@@ -126,7 +143,7 @@ const Classes = () => {
           )}
           {showHistory && history && history.length > 0 && (
             <div className="absolute z-40 left-0 right-0 top-12 bg-card rounded-2xl border border-border shadow-card p-2 space-y-1">
-              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />최근 검색</p>
+              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />{t.groups.recentSearch}</p>
               {history.map((h) => {
                 const text = h.query.replace(/^cls:/, "");
                 return (
@@ -140,11 +157,11 @@ const Classes = () => {
           )}
         </form>
         <div className="flex gap-2 mb-2">
-          {PRICE.map((p) => (
-            <button key={p} onClick={() => setPrice(p)} className={cn(
+          {PRICE_FILTERS.map((p) => (
+            <button key={p.id} onClick={() => setPrice(p.id)} className={cn(
               "px-3 py-1 rounded-full text-xs font-medium transition-smooth",
-              price === p ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-            )}>{p}</button>
+              price === p.id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+            )}>{p.label}</button>
           ))}
           <div className="ml-auto flex gap-1">
             {SORTS.map((s) => (
@@ -156,11 +173,11 @@ const Classes = () => {
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-          {filters.map((f) => (
-            <button key={f} onClick={() => setActive(f)} className={cn(
+          {CLASS_FILTERS.map((f) => (
+            <button key={f.id} onClick={() => setActive(f.id)} className={cn(
               "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-smooth",
-              active === f ? "bg-foreground text-background" : "bg-muted text-foreground hover:bg-secondary"
-            )}>{f}</button>
+              active === f.id ? "bg-foreground text-background" : "bg-muted text-foreground hover:bg-secondary"
+            )}>{f.label}</button>
           ))}
         </div>
       </header>
@@ -189,14 +206,14 @@ const Classes = () => {
                     <MapPin className="h-3 w-3" /> {c.location}
                   </p>
                 )}
-                <p className="text-sm font-bold mt-1.5">{c.price ?? "무료"}</p>
+                <p className="text-sm font-bold mt-1.5">{c.price ?? t.classes.free}</p>
               </div>
             </Link>
           ))
         ) : (
           <div className="col-span-2 text-center py-16 text-sm text-muted-foreground">
             <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-30" />
-            아직 등록된 클래스가 없어요
+            {t.classes.empty}
           </div>
         )}
       </div>

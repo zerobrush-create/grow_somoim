@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type ChatTab = "group" | "dm";
 
@@ -15,6 +16,7 @@ const Chat = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [chatTab, setChatTab] = useState<ChatTab>("group");
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!user) return;
@@ -86,7 +88,7 @@ const Chat = () => {
     return (
       <MobileShell>
         <div className="px-4 py-20 text-center text-sm text-muted-foreground">
-          로그인 후 채팅을 이용할 수 있어요
+          {t.chat.loginRequired}
         </div>
       </MobileShell>
     );
@@ -96,13 +98,13 @@ const Chat = () => {
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-0 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold">채팅</h1>
+          <h1 className="text-xl font-bold">{t.nav.chat}</h1>
           <button className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="검색">
             <Search className="h-5 w-5" />
           </button>
         </div>
         <div className="flex">
-          {([["group","소모임"],["dm","DM"]] as const).map(([id,label]) => (
+          {([["group", t.chat.groupTab], ["dm", t.chat.dmTab]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setChatTab(id)} className={cn(
               "flex-1 py-2.5 text-sm font-semibold border-b-2 transition-smooth",
               chatTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground"
@@ -123,14 +125,14 @@ const Chat = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate">{g.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">탭하여 대화 시작</p>
+                  <p className="text-xs text-muted-foreground truncate">{t.chat.tapToStart}</p>
                 </div>
               </Link>
             ))
           ) : (
             <div className="text-center py-20 text-sm text-muted-foreground">
               <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              가입한 모임이 없어요
+              {t.chat.noGroups}
             </div>
           )}
         </div>
@@ -141,24 +143,24 @@ const Chat = () => {
           {dmLoading ? (
             <div className="p-4 space-y-3"><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
           ) : dmThreads && dmThreads.filter((t) => !blockedIds?.has(t.peerId)).length > 0 ? (
-            dmThreads.filter((t) => !blockedIds?.has(t.peerId)).map((t) => (
-              <Link key={t.peerId} to={`/dm/${t.peerId}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
+            dmThreads.filter((thread) => !blockedIds?.has(thread.peerId)).map((thread) => (
+              <Link key={thread.peerId} to={`/dm/${thread.peerId}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={t.profile?.avatar_url ?? undefined} />
-                  <AvatarFallback>{(t.profile?.name ?? t.profile?.email ?? "?").slice(0,1).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={thread.profile?.avatar_url ?? undefined} />
+                  <AvatarFallback>{(thread.profile?.name ?? thread.profile?.email ?? "?").slice(0,1).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold truncate">{t.profile?.name ?? t.profile?.email ?? "사용자"}</p>
+                    <p className="text-sm font-bold truncate">{thread.profile?.name ?? thread.profile?.email ?? t.chat.tapToStart}</p>
                     <span className="text-[11px] text-muted-foreground flex-shrink-0">
-                      {new Date(t.time).toLocaleDateString("ko-KR")}
+                      {new Date(thread.time).toLocaleDateString("ko-KR")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="text-xs text-muted-foreground truncate">{t.lastMessage}</p>
-                    {t.unread > 0 && (
+                    <p className="text-xs text-muted-foreground truncate">{thread.lastMessage}</p>
+                    {thread.unread > 0 && (
                       <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
-                        {t.unread}
+                        {thread.unread}
                       </span>
                     )}
                   </div>
@@ -168,7 +170,7 @@ const Chat = () => {
           ) : (
             <div className="text-center py-20 text-sm text-muted-foreground">
               <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              아직 대화가 없어요
+              {t.chat.noMessages}
             </div>
           )}
         </div>

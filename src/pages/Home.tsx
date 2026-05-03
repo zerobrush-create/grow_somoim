@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/grow-logo.png";
 
 const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
+  const { t } = useLanguage();
 
   const { data: banners } = useQuery({
     queryKey: ["banners-active"],
@@ -76,15 +78,18 @@ const Home = () => {
   });
 
   const quickMenu = [
-    { to: "/points", label: "포인트", icon: Coins, color: "bg-amber-100 text-amber-700" },
-    { to: "/stores", label: "가맹점", icon: Store, color: "bg-emerald-100 text-emerald-700" },
-    { to: "/recommendations", label: "추천", icon: Sparkles, color: "bg-pink-100 text-pink-700" },
-    { to: "/calendar", label: "캘린더", icon: CalendarDays, color: "bg-indigo-100 text-indigo-700" },
-    { to: "/ads", label: "광고신청", icon: Megaphone, color: "bg-rose-100 text-rose-700" },
-    { to: "/leaders", label: "리더", icon: Crown, color: "bg-purple-100 text-purple-700" },
-    { to: "/instructor/apply", label: "강사신청", icon: GraduationCap, color: "bg-sky-100 text-sky-700" },
-    ...(isAdmin ? [{ to: "/admin", label: "관리자", icon: ShieldCheck, color: "bg-slate-100 text-slate-700" }] : []),
+    { to: "/points", label: t.home.quickPoints, icon: Coins, color: "bg-amber-100 text-amber-700" },
+    { to: "/stores", label: t.home.quickStores, icon: Store, color: "bg-emerald-100 text-emerald-700" },
+    { to: "/recommendations", label: t.home.quickRecommend, icon: Sparkles, color: "bg-pink-100 text-pink-700" },
+    { to: "/calendar", label: t.home.quickCalendar, icon: CalendarDays, color: "bg-indigo-100 text-indigo-700" },
+    { to: "/ads", label: t.home.quickAds, icon: Megaphone, color: "bg-rose-100 text-rose-700" },
+    { to: "/leaders", label: t.home.quickLeaders, icon: Crown, color: "bg-purple-100 text-purple-700" },
+    { to: "/instructor/apply", label: t.home.quickInstructor, icon: GraduationCap, color: "bg-sky-100 text-sky-700" },
+    ...(isAdmin ? [{ to: "/admin", label: t.home.quickAdmin, icon: ShieldCheck, color: "bg-slate-100 text-slate-700" }] : []),
   ];
+
+  const getCatLabel = (id: string) =>
+    t.categories[id as keyof typeof t.categories] ?? id;
 
   return (
     <MobileShell>
@@ -93,7 +98,7 @@ const Home = () => {
           <div className="flex items-center gap-2">
             <img src={logo} alt="GROW" className="h-9 w-9 rounded-full shadow-soft" />
             <div>
-              <p className="text-xs text-muted-foreground leading-none">내 위치</p>
+              <p className="text-xs text-muted-foreground leading-none">{t.home.myLocation}</p>
               <p className="text-sm font-bold flex items-center gap-1 leading-tight mt-0.5">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
                 서울 마포구 연남동
@@ -108,7 +113,7 @@ const Home = () => {
 
         <Link to="/search" className="flex items-center gap-2 bg-card rounded-2xl px-4 py-3 shadow-soft transition-smooth hover:shadow-card">
           <Search className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">모임, 클래스, 친구를 검색해보세요</span>
+          <span className="text-sm text-muted-foreground">{t.home.searchPlaceholder}</span>
         </Link>
       </header>
 
@@ -130,8 +135,8 @@ const Home = () => {
             <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
             <div className="relative">
               <Badge className="bg-white/20 text-white border-0 hover:bg-white/30 mb-2">NEW</Badge>
-              <h2 className="text-xl font-bold leading-tight">오늘, 새로운 인연을<br />만나보세요 🌱</h2>
-              <p className="text-sm text-white/90 mt-1.5">취향이 맞는 사람들과 함께 성장해요</p>
+              <h2 className="text-xl font-bold leading-tight">{t.home.heroTitle}</h2>
+              <p className="text-sm text-white/90 mt-1.5">{t.home.heroSubtitle}</p>
             </div>
           </div>
         )}
@@ -142,21 +147,21 @@ const Home = () => {
           {categories.slice(0, 8).map((c) => (
             <Link key={c.id} to="/groups" className="flex flex-col items-center gap-1.5 group">
               <div className="h-14 w-14 rounded-2xl bg-primary-soft flex items-center justify-center text-2xl transition-smooth group-hover:scale-105 group-hover:shadow-soft">{c.emoji}</div>
-              <span className="text-xs font-medium text-foreground">{c.label}</span>
+              <span className="text-xs font-medium text-foreground">{getCatLabel(c.id)}</span>
             </Link>
           ))}
         </div>
       </section>
 
       <section className="px-4 pt-6">
-        <h3 className="text-xs font-bold text-muted-foreground mb-2">빠른 메뉴</h3>
+        <h3 className="text-xs font-bold text-muted-foreground mb-2">{t.home.quickMenu}</h3>
         <div className="grid grid-cols-5 gap-2">
           {quickMenu.map((m) => (
             <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
               <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
                 <m.icon className="h-5 w-5" />
               </div>
-              <span className="text-[10px] font-medium text-foreground">{m.label}</span>
+              <span className="text-[10px] font-medium text-foreground text-center leading-tight">{m.label}</span>
             </Link>
           ))}
         </div>
@@ -165,10 +170,10 @@ const Home = () => {
       <section className="pt-7">
         <div className="px-4 flex items-end justify-between mb-3">
           <div>
-            <h3 className="text-lg font-bold flex items-center gap-1.5"><Sparkles className="h-5 w-5 text-accent" />추천 모임</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">새로 열린 모임을 만나보세요</p>
+            <h3 className="text-lg font-bold flex items-center gap-1.5"><Sparkles className="h-5 w-5 text-accent" />{t.home.recommended}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t.home.recommendedSub}</p>
           </div>
-          <Link to="/groups" className="text-xs text-muted-foreground flex items-center">전체 <ChevronRight className="h-3 w-3" /></Link>
+          <Link to="/groups" className="text-xs text-muted-foreground flex items-center">{t.home.seeAll} <ChevronRight className="h-3 w-3" /></Link>
         </div>
         <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
           {(recommended ?? []).map((g) => (
@@ -183,7 +188,7 @@ const Home = () => {
               </div>
             </Link>
           ))}
-          {(!recommended || recommended.length === 0) && <p className="text-xs text-muted-foreground py-6">아직 모임이 없어요</p>}
+          {(!recommended || recommended.length === 0) && <p className="text-xs text-muted-foreground py-6">{t.home.noGroups}</p>}
         </div>
       </section>
 
@@ -192,7 +197,7 @@ const Home = () => {
           <div className="px-4 flex items-end justify-between mb-3">
             <div>
               <h3 className="text-lg font-bold flex items-center gap-1.5"><Heart className="h-5 w-5 text-accent" />For You</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">관심사 기반 맞춤 추천</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t.home.forYouSub}</p>
             </div>
           </div>
           <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
@@ -214,7 +219,7 @@ const Home = () => {
 
       {user && followingFeed && followingFeed.length > 0 && (
         <section className="pt-7 px-4">
-          <h3 className="text-lg font-bold flex items-center gap-1.5 mb-3"><UserPlus className="h-5 w-5 text-primary" />팔로우 피드</h3>
+          <h3 className="text-lg font-bold flex items-center gap-1.5 mb-3"><UserPlus className="h-5 w-5 text-primary" />{t.home.followFeed}</h3>
           <div className="space-y-2">
             {followingFeed.map((g: any) => (
               <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 bg-card rounded-2xl p-3 shadow-soft hover:shadow-card transition-smooth">
@@ -224,7 +229,7 @@ const Home = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-primary font-semibold">{g.category}</p>
                   <p className="text-sm font-bold truncate">{g.name}</p>
-                  <p className="text-[10px] text-muted-foreground">팔로잉이 새로 만든 모임</p>
+                  <p className="text-[10px] text-muted-foreground">{t.home.followingNew}</p>
                 </div>
               </Link>
             ))}
@@ -234,7 +239,7 @@ const Home = () => {
 
       <section className="px-4 pt-7">
         <div className="flex items-end justify-between mb-3">
-          <h3 className="text-lg font-bold flex items-center gap-1.5"><TrendingUp className="h-5 w-5 text-accent" />지금 뜨는 모임</h3>
+          <h3 className="text-lg font-bold flex items-center gap-1.5"><TrendingUp className="h-5 w-5 text-accent" />{t.home.trending}</h3>
         </div>
         <div className="space-y-3">
           {(hot ?? []).map((g: any) => (

@@ -12,14 +12,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "온라인"];
 type SortKey = "recent" | "popular" | "rating";
-const SORTS: { id: SortKey; label: string }[] = [
-  { id: "recent", label: "최신순" },
-  { id: "popular", label: "인기순" },
-  { id: "rating", label: "평점순" },
-];
 const PAGE_SIZE = 12;
 
 const Groups = () => {
@@ -33,6 +29,13 @@ const Groups = () => {
   const { data: groups, isLoading, error } = useGroups();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { t } = useLanguage();
+
+  const SORTS: { id: SortKey; label: string }[] = [
+    { id: "recent", label: t.groups.sortRecent },
+    { id: "popular", label: t.groups.sortPopular },
+    { id: "rating", label: t.groups.sortRating },
+  ];
 
   const { data: history } = useQuery({
     queryKey: ["search-history", user?.id],
@@ -90,11 +93,14 @@ const Groups = () => {
   const visibleGroups = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 
+  const getCatLabel = (id: string) =>
+    t.categories[id as keyof typeof t.categories] ?? id;
+
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border">
         <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-xl font-bold flex-1">소모임</h1>
+          <h1 className="text-xl font-bold flex-1">{t.nav.groups}</h1>
           <Link
             to="/groups/new"
             className="p-2 rounded-full hover:bg-muted transition-smooth"
@@ -110,7 +116,7 @@ const Groups = () => {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setShowHistory(true)}
             onBlur={() => setTimeout(() => setShowHistory(false), 150)}
-            placeholder="모임 이름·설명·지역으로 검색"
+            placeholder={t.groups.searchPlaceholder}
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
@@ -120,7 +126,7 @@ const Groups = () => {
           )}
           {showHistory && history && history.length > 0 && (
             <div className="absolute z-40 left-0 right-0 top-12 bg-card rounded-2xl border border-border shadow-card p-2 space-y-1">
-              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />최근 검색</p>
+              <p className="text-[11px] text-muted-foreground px-2 py-1 flex items-center gap-1"><History className="h-3 w-3" />{t.groups.recentSearch}</p>
               {history.map((h) => (
                 <div key={h.id} className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-lg">
                   <button type="button" onMouseDown={() => { setQuery(h.query); setShowHistory(false); }} className="flex-1 text-left text-sm truncate">{h.query}</button>
@@ -152,7 +158,7 @@ const Groups = () => {
                 region === l ? "bg-foreground text-background" : "bg-muted text-foreground"
               )}
             >
-              {l}
+              {l === "전체" ? t.groups.locationAll : l}
             </button>
           ))}
         </div>
@@ -169,7 +175,7 @@ const Groups = () => {
               )}
             >
               <span>{c.emoji}</span>
-              <span>{c.label}</span>
+              <span>{getCatLabel(c.id)}</span>
             </button>
           ))}
         </div>
@@ -194,13 +200,13 @@ const Groups = () => {
 
         {error && (
           <div className="text-center py-16 text-destructive text-sm">
-            모임을 불러오지 못했어요
+            {t.groups.loadError}
           </div>
         )}
 
         {!isLoading && !error && filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground text-sm">
-            아직 이 카테고리의 모임이 없어요
+            {t.groups.empty}
           </div>
         )}
 
@@ -231,7 +237,7 @@ const Groups = () => {
                     </span>
                   )}
                   <span className="flex items-center gap-0.5">
-                    <Users className="h-3 w-3" /> {g.members}명
+                    <Users className="h-3 w-3" /> {g.members}{t.groups.membersUnit}
                   </span>
                   {g.reviewCount > 0 && (
                     <span className="flex items-center gap-0.5">
