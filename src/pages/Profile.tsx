@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award, Sun, Moon, Trash2 } from "lucide-react";
+import { MapPin, Copy, ChevronRight, Settings, LogOut, Star, Users, GraduationCap, Coins, Gift, Bell, Shield, Edit, BookOpen, Heart, Award, Sun, Moon, Trash2, Languages } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGE_LABELS } from "@/contexts/LanguageContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type { Language } from "@/i18n/translations";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { Badge } from "@/components/ui/badge";
@@ -106,9 +108,25 @@ const Profile = () => {
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">내 정보</h1>
         <div className="flex gap-1">
-          <button onClick={() => setLang(lang === "ko" ? "en" : "ko")} className="p-2 rounded-full hover:bg-muted transition-smooth text-xs font-bold w-9 h-9 flex items-center justify-center" aria-label="언어 변경">
-            {lang === "ko" ? "EN" : "한"}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-full hover:bg-muted transition-smooth w-9 h-9 flex items-center justify-center text-base" aria-label="언어 변경">
+                {LANGUAGE_LABELS[lang].flag}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {(Object.entries(LANGUAGE_LABELS) as [Language, { flag: string; label: string }][]).map(([code, { flag, label }]) => (
+                <DropdownMenuItem
+                  key={code}
+                  onClick={() => setLang(code)}
+                  className={`gap-2 ${lang === code ? "font-semibold text-primary" : ""}`}
+                >
+                  <span className="text-base">{flag}</span>
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="다크모드 토글">
             {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>

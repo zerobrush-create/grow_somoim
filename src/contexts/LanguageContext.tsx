@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { Language, translations, Translations } from "@/i18n/translations";
+import { Language, translations, Translations, LANGUAGE_LABELS } from "@/i18n/translations";
+
+export { LANGUAGE_LABELS };
 
 type LanguageContextValue = {
   lang: Language;
@@ -13,7 +15,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Language>(() => {
     try {
       const v = localStorage.getItem("grow_lang");
-      return (v === "ko" || v === "en") ? v : "ko";
+      return (v && v in translations) ? (v as Language) : "ko";
     } catch {
       return "ko";
     }
