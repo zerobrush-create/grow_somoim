@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Points = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const { data: points, isLoading } = useQuery({
     queryKey: ["points", user?.id],
@@ -21,15 +23,15 @@ const Points = () => {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.back}>
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold flex-1">포인트 내역</h1>
+          <h1 className="text-base font-bold flex-1">{t.points.title}</h1>
         </header>
 
         <section className="p-4">
           <div className="gradient-primary rounded-2xl p-5 text-primary-foreground">
-            <div className="flex items-center gap-2 text-xs text-white/80"><Coins className="h-4 w-4" /> 보유 포인트</div>
+            <div className="flex items-center gap-2 text-xs text-white/80"><Coins className="h-4 w-4" /> {t.points.myPoints}</div>
             <p className="text-3xl font-bold mt-1">{total.toLocaleString()} P</p>
           </div>
         </section>
@@ -54,7 +56,7 @@ const Points = () => {
               );
             })
           ) : (
-            <p className="text-center text-sm text-muted-foreground py-12">아직 포인트 내역이 없어요</p>
+            <p className="text-center text-sm text-muted-foreground py-12">{t.points.empty}</p>
           )}
         </section>
       </div>

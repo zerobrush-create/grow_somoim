@@ -37,6 +37,12 @@ const Groups = () => {
     { id: "rating", label: t.groups.sortRating },
   ];
 
+  const LOCATION_KEYS: Record<string, keyof typeof t.locations> = {
+    "전체": "all", "서울": "seoul", "경기": "gyeonggi", "인천": "incheon",
+    "부산": "busan", "대구": "daegu", "광주": "gwangju", "대전": "daejeon", "온라인": "online",
+  };
+  const getLocationLabel = (loc: string) => t.locations[LOCATION_KEYS[loc] ?? "all"] ?? loc;
+
   const { data: history } = useQuery({
     queryKey: ["search-history", user?.id],
     enabled: !!user,
@@ -158,7 +164,7 @@ const Groups = () => {
                 region === l ? "bg-foreground text-background" : "bg-muted text-foreground"
               )}
             >
-              {l === "전체" ? t.groups.locationAll : l}
+              {getLocationLabel(l)}
             </button>
           ))}
         </div>

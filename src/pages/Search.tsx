@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search as SearchIcon, Users, GraduationCap, User as UserIcon, Hash, X, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,15 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Tab = "all" | "groups" | "classes" | "users" | "tags";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "all", label: "전체" },
-  { id: "groups", label: "모임" },
-  { id: "classes", label: "클래스" },
-  { id: "users", label: "유저" },
-  { id: "tags", label: "태그" },
-];
 
 const useDebounced = <T,>(value: T, delay = 250) => {
   const [v, setV] = useState(value);
@@ -31,6 +25,15 @@ const Search = () => {
   const [q, setQ] = useState(params.get("q") ?? "");
   const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) ?? "all");
   const debounced = useDebounced(q.trim(), 250);
+  const { t } = useLanguage();
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: "all", label: t.search.tabAll },
+    { id: "groups", label: t.search.tabGroups },
+    { id: "classes", label: t.search.tabClasses },
+    { id: "users", label: t.search.tabUsers },
+    { id: "tags", label: t.search.tabTags },
+  ];
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -39,7 +42,6 @@ const Search = () => {
     setParams(next, { replace: true });
   }, [debounced, tab, setParams]);
 
-  // Save search history (debounced, only when typed enough)
   useEffect(() => {
     if (!user || debounced.length < 2) return;
     supabase.from("search_history").insert({ user_id: user.id, query: debounced }).then(() => {});
@@ -94,16 +96,16 @@ const Search = () => {
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-3 py-2">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로"><ArrowLeft className="h-5 w-5" /></button>
+            <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.back}><ArrowLeft className="h-5 w-5" /></button>
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="모임, 클래스, 유저, #태그" className="pl-9 pr-9 h-10 rounded-full" />
-              {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-muted flex items-center justify-center" aria-label="지우기"><X className="h-3.5 w-3.5" /></button>}
+              <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.search.placeholder} className="pl-9 pr-9 h-10 rounded-full" />
+              {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.cancel}><X className="h-3.5 w-3.5" /></button>}
             </div>
           </div>
           <div className="flex gap-1 mt-2 overflow-x-auto scrollbar-hide">
-            {TABS.map((t) => (
-              <button key={t.id} onClick={() => setTab(t.id)} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-smooth", tab === t.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{t.label}</button>
+            {TABS.map((tab_item) => (
+              <button key={tab_item.id} onClick={() => setTab(tab_item.id)} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-smooth", tab === tab_item.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{tab_item.label}</button>
             ))}
           </div>
         </header>
@@ -112,7 +114,7 @@ const Search = () => {
           <div className="p-4 space-y-4">
             {history && history.length > 0 && (
               <section>
-                <h3 className="text-xs font-bold text-muted-foreground mb-2">최근 검색</h3>
+                <h3 className="text-xs font-bold text-muted-foreground mb-2">{t.search.recentSearch}</h3>
                 <div className="flex flex-wrap gap-2">
                   {history.map((h) => (
                     <button key={h.query} onClick={() => setQ(h.query)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-xs">
@@ -122,16 +124,16 @@ const Search = () => {
                 </div>
               </section>
             )}
-            <p className="text-center text-xs text-muted-foreground pt-8">검색어를 입력해 주세요</p>
+            <p className="text-center text-xs text-muted-foreground pt-8">{t.search.enterKeyword}</p>
           </div>
         )}
 
-        {empty && <p className="text-center text-sm text-muted-foreground py-16">"{debounced}"에 대한 결과가 없어요</p>}
+        {empty && <p className="text-center text-sm text-muted-foreground py-16">"{debounced}" {t.search.noResults}</p>}
 
         <div className="px-4 py-3 space-y-5">
           {(tab === "all" || tab === "groups") && groups && groups.length > 0 && (
             <section>
-              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><Users className="h-4 w-4 text-primary" />모임 {groups.length}</h3>
+              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><Users className="h-4 w-4 text-primary" />{t.search.sectionGroups} {groups.length}</h3>
               <div className="space-y-2">
                 {groups.map((g) => (
                   <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 bg-card rounded-xl p-2 border border-border hover:shadow-soft transition-smooth">
@@ -151,7 +153,7 @@ const Search = () => {
 
           {(tab === "all" || tab === "classes") && classes && classes.length > 0 && (
             <section>
-              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><GraduationCap className="h-4 w-4 text-primary" />클래스 {classes.length}</h3>
+              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><GraduationCap className="h-4 w-4 text-primary" />{t.search.sectionClasses} {classes.length}</h3>
               <div className="space-y-2">
                 {classes.map((c) => (
                   <Link key={c.id} to={`/classes/${c.id}`} className="flex items-center gap-3 bg-card rounded-xl p-2 border border-border">
@@ -161,7 +163,7 @@ const Search = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] text-primary font-semibold">{c.category}</p>
                       <p className="text-sm font-bold truncate">{c.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{c.price ?? "무료"}</p>
+                      <p className="text-[11px] text-muted-foreground">{c.price ?? t.search.free}</p>
                     </div>
                   </Link>
                 ))}
@@ -171,13 +173,13 @@ const Search = () => {
 
           {(tab === "all" || tab === "users") && users && users.length > 0 && (
             <section>
-              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><UserIcon className="h-4 w-4 text-primary" />유저 {users.length}</h3>
+              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><UserIcon className="h-4 w-4 text-primary" />{t.search.sectionUsers} {users.length}</h3>
               <div className="space-y-2">
                 {users.map((u) => (
                   <Link key={u.id} to={`/users/${u.id}`} className="flex items-center gap-3 bg-card rounded-xl p-2 border border-border">
                     <Avatar className="h-10 w-10"><AvatarImage src={u.avatar_url ?? undefined} /><AvatarFallback>{(u.name ?? u.nickname ?? "U").charAt(0)}</AvatarFallback></Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold truncate">{u.name ?? u.nickname ?? "회원"}</p>
+                      <p className="text-sm font-bold truncate">{u.name ?? u.nickname ?? t.search.userDefault}</p>
                       {u.location && <p className="text-[11px] text-muted-foreground truncate">{u.location}</p>}
                     </div>
                   </Link>
@@ -188,11 +190,11 @@ const Search = () => {
 
           {(tab === "all" || tab === "tags") && tags && tags.length > 0 && (
             <section>
-              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><Hash className="h-4 w-4 text-primary" />태그 {tags.length}</h3>
+              <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2"><Hash className="h-4 w-4 text-primary" />{t.search.sectionTags} {tags.length}</h3>
               <div className="flex flex-wrap gap-2">
-                {tags.map((t) => (
-                  <Link key={t.tag} to={`/tags/${encodeURIComponent(t.tag)}`}>
-                    <Badge variant="secondary" className="bg-primary-soft text-primary border-0 hover:bg-primary-soft/70">#{t.tag} <span className="ml-1 text-[10px] text-muted-foreground">{t.count}</span></Badge>
+                {tags.map((tag_item) => (
+                  <Link key={tag_item.tag} to={`/tags/${encodeURIComponent(tag_item.tag)}`}>
+                    <Badge variant="secondary" className="bg-primary-soft text-primary border-0 hover:bg-primary-soft/70">#{tag_item.tag} <span className="ml-1 text-[10px] text-muted-foreground">{tag_item.count}</span></Badge>
                   </Link>
                 ))}
               </div>
