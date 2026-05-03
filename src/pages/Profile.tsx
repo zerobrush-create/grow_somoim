@@ -86,8 +86,10 @@ const Profile = () => {
   const isAdmin = roles?.some((r) => r.role === "admin");
   const isInstructor = roles?.some((r) => r.role === "instructor");
 
+  const referralLink = `${window.location.origin}/login?ref=${referralCode}&mode=signup`;
+
   const copyCode = () => {
-    navigator.clipboard.writeText(referralCode).catch(() => {});
+    navigator.clipboard.writeText(referralLink).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -208,11 +210,15 @@ const Profile = () => {
         <div className="bg-card rounded-2xl p-4 shadow-soft border border-border">
           <div className="flex items-center gap-2 mb-3"><Gift className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">친구 초대</h3></div>
           <p className="text-xs text-muted-foreground mb-3">친구를 초대하면 포인트를 받을 수 있어요!</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-muted rounded-xl px-3 py-2.5 font-mono text-sm font-bold tracking-wider text-center">{referralCode}</div>
-            <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground" aria-label="복사"><Copy className="h-4 w-4" /></button>
+          <div className="bg-muted rounded-xl px-3 py-2.5 mb-2">
+            <p className="text-[10px] text-muted-foreground mb-1">내 추천 코드</p>
+            <p className="font-mono text-base font-bold tracking-widest text-primary">{referralCode}</p>
           </div>
-          {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">복사되었어요!</p>}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-muted/60 rounded-xl px-3 py-2 text-[11px] text-muted-foreground truncate">{referralLink}</div>
+            <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0" aria-label="링크 복사"><Copy className="h-4 w-4" /></button>
+          </div>
+          {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">링크가 복사되었어요!</p>}
         </div>
       </section>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,15 @@ const Login = () => {
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // 추천 링크로 진입 시 자동 처리
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    const forceMode = searchParams.get("mode");
+    if (ref) setReferralCode(ref.toUpperCase());
+    if (forceMode === "signup" || ref) setMode("signup");
+  }, []);
 
   useEffect(() => {
     if (user) navigate("/profile", { replace: true });
@@ -264,8 +273,20 @@ const Login = () => {
           {mode === "signup" && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="ref" className="text-xs font-semibold">추천 코드 (선택)</Label>
-                <Input id="ref" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="친구의 추천 코드" className="h-12 rounded-xl bg-muted border-0" />
+                <Label htmlFor="ref" className="text-xs font-semibold flex items-center gap-1.5">
+                  추천 코드 (선택)
+                  {referralCode && searchParams.get("ref") && (
+                    <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full font-semibold">자동 입력됨</span>
+                  )}
+                </Label>
+                <Input
+                  id="ref"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="친구의 추천 코드 (예: AB12CD34)"
+                  className={`h-12 rounded-xl border-0 font-mono tracking-widest uppercase ${referralCode ? "bg-primary-soft text-primary" : "bg-muted"}`}
+                  maxLength={8}
+                />
               </div>
               <div className="space-y-2 pt-2">
                 <label className="flex items-start gap-2 text-xs">
