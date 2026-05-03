@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Video, Paperclip } from "lucide-react";
+import { ArrowLeft, Send, Video, Paperclip, Languages } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 
 type Message = {
   id: number;
@@ -26,6 +27,7 @@ const GroupChat = () => {
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const [onlineCount, setOnlineCount] = useState(0);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -167,6 +169,11 @@ const GroupChat = () => {
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
+  useEffect(() => {
+    if (!autoTranslate || !messages || !user) return;
+    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id !== user.id })));
+  }, [autoTranslate, messages, user]);
+
   if (!user) {
     navigate("/login");
     return null;
@@ -188,6 +195,14 @@ const GroupChat = () => {
               </p>
             )}
           </div>
+          <button
+            onClick={() => setAutoTranslate(!autoTranslate)}
+            className={cn("h-9 w-9 rounded-full flex items-center justify-center transition-smooth relative", autoTranslate ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground hover:text-foreground")}
+            aria-label="자동번역 토글"
+          >
+            <Languages className="h-4 w-4" />
+            {autoTranslate && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />}
+          </button>
           <a
             href={`https://meet.jit.si/grow-${id}`}
             target="_blank"
@@ -210,6 +225,9 @@ const GroupChat = () => {
             messages.map((m) => {
               const mine = m.sender_id === user.id;
               const s = senders?.get(m.sender_id);
+              const isImg = m.content.startsWith("[img:");
+              const translatedText = translated[m.id];
+              const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
                   {!mine && (
@@ -220,11 +238,31 @@ const GroupChat = () => {
                   )}
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
                     {!mine && <span className="text-xs text-muted-foreground mb-0.5">{s?.name ?? s?.email ?? "?"}</span>}
-                    {m.content.startsWith("[img:") ? (
+                    {isImg ? (
                       <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
                     ) : (
-                      <div className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words", mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>
+                      <button
+                        type="button"
+                        onClick={() => translate(m.id, m.content)}
+                        className={cn(
+                          "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words text-left relative",
+                          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
+                        )}
+                      >
                         {m.content}
+                        {isTranslating && (
+                          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-background flex items-center justify-center">
+                            <span className="h-2.5 w-2.5 rounded-full border border-primary border-t-transparent animate-spin" />
+                          </span>
+                        )}
+                      </button>
+                    )}
+                    {translatedText && (
+                      <div className="mt-1 px-3 py-1.5 rounded-xl text-xs text-muted-foreground bg-muted/60 border border-border max-w-full">
+                        <span className="inline-flex items-center gap-1 mb-0.5 text-[10px] font-semibold text-primary">
+                          <span className="bg-primary/10 rounded px-1">AI</span> 번역
+                        </span>
+                        <p className="whitespace-pre-wrap break-words">{translatedText}</p>
                       </div>
                     )}
                     <span className="text-[10px] text-muted-foreground mt-0.5">

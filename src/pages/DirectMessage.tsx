@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, MoreVertical, ShieldOff, Paperclip } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, ShieldOff, Paperclip, Languages } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReportDialog } from "@/components/ReportDialog";
+import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 
 type DM = { id: number; content: string; sender_id: string; receiver_id: string; created_at: string; is_read: boolean };
 
@@ -24,6 +25,7 @@ const DirectMessage = () => {
   const [text, setText] = useState("");
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [peerLastSeen, setPeerLastSeen] = useState<string | null>(null);
+  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [peerTyping, setPeerTyping] = useState(false);
@@ -171,6 +173,11 @@ const DirectMessage = () => {
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
+  useEffect(() => {
+    if (!autoTranslate || !messages || !peerId) return;
+    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id === peerId })));
+  }, [autoTranslate, messages, peerId]);
+
   if (!user) { navigate("/login"); return null; }
 
   return (
@@ -188,6 +195,15 @@ const DirectMessage = () => {
               {peerOnline ? "온라인" : peerLastSeen ? `마지막 접속 ${new Date(peerLastSeen).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : "오프라인"}
             </p>
           </div>
+          <button
+            onClick={() => setAutoTranslate(!autoTranslate)}
+            className={cn("h-9 w-9 rounded-full flex items-center justify-center transition-smooth relative", autoTranslate ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+            aria-label="자동번역 토글"
+            title={autoTranslate ? "자동번역 ON" : "자동번역 OFF"}
+          >
+            <Languages className="h-4.5 w-4.5" />
+            {autoTranslate && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />}
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="더보기">
@@ -230,14 +246,40 @@ const DirectMessage = () => {
           ) : messages && messages.length > 0 ? (
             messages.map((m) => {
               const mine = m.sender_id === user.id;
+              const isImg = m.content.startsWith("[img:");
+              const translatedText = translated[m.id];
+              const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
-                    {m.content.startsWith("[img:") ? (
+                    {isImg ? (
                       <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
                     ) : (
-                      <div className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words", mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>
+                      <button
+                        type="button"
+                        onClick={() => !isImg && translate(m.id, m.content)}
+                        className={cn(
+                          "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words text-left relative",
+                          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
+                        )}
+                      >
                         {m.content}
+                        {isTranslating && (
+                          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-background flex items-center justify-center">
+                            <span className="h-2.5 w-2.5 rounded-full border border-primary border-t-transparent animate-spin" />
+                          </span>
+                        )}
+                      </button>
+                    )}
+                    {translatedText && (
+                      <div className={cn(
+                        "mt-1 px-3 py-1.5 rounded-xl text-xs text-muted-foreground bg-muted/60 border border-border max-w-full",
+                        mine ? "items-end" : "items-start"
+                      )}>
+                        <span className="inline-flex items-center gap-1 mb-0.5 text-[10px] font-semibold text-primary">
+                          <span className="bg-primary/10 rounded px-1">AI</span> 번역
+                        </span>
+                        <p className="whitespace-pre-wrap break-words">{translatedText}</p>
                       </div>
                     )}
                     <span className="text-[10px] text-muted-foreground mt-0.5">
