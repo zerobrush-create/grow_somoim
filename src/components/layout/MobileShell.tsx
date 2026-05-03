@@ -2,11 +2,12 @@ import { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Users, GraduationCap, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGE_LABELS } from "@/contexts/LanguageContext";
 
 export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) => {
   const location = useLocation();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isKorean = lang === "ko";
 
   const tabs = [
     { to: "/", label: t.nav.home, icon: Home },
@@ -22,6 +23,14 @@ export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNa
       </div>
       {!hideNav && (
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
+          {!isKorean && (
+            <div className="flex justify-center pt-1 pb-0">
+              <NavLink to="/profile" className="text-[10px] text-muted-foreground flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60">
+                <span>{LANGUAGE_LABELS[lang].flag}</span>
+                <span>{LANGUAGE_LABELS[lang].label} · 내정보에서 변경</span>
+              </NavLink>
+            </div>
+          )}
           <div className="grid grid-cols-5">
             {tabs.map(({ to, label, icon: Icon }) => {
               const active = to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);

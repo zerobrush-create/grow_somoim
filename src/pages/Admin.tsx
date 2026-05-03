@@ -270,8 +270,8 @@ const Admin = () => {
       const { error } = await supabase.from("points").insert({
         user_id: pointUserId.trim(),
         amount,
-        reason: pointReason.trim() || "관리자 지급",
-        granted_by: user!.id,
+        description: pointReason.trim() || "관리자 지급",
+        type: "grant" as const,
       });
       if (error) throw error;
     },

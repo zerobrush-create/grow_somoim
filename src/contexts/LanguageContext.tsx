@@ -15,7 +15,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Language>(() => {
     try {
       const v = localStorage.getItem("grow_lang");
-      return (v && v in translations) ? (v as Language) : "ko";
+      // Only accept explicitly valid language codes; default to "ko"
+      if (v && Object.keys(translations).includes(v)) return v as Language;
+      // If nothing stored (first visit), ensure "ko" is saved
+      localStorage.setItem("grow_lang", "ko");
+      return "ko";
     } catch {
       return "ko";
     }
