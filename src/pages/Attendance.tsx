@@ -7,11 +7,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Attendance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = today.getMonth();
@@ -36,19 +38,19 @@ const Attendance = () => {
 
   const checkIn = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error("로그인이 필요합니다");
+      if (!user) throw new Error("login required");
       const { error } = await supabase.from("attendance").insert({ user_id: user.id, attended_on: todayStr });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "출석 완료! +10P 적립되었어요" });
+      toast({ title: t.attendance.checkSuccess });
       qc.invalidateQueries({ queryKey: ["attendance", user?.id] });
       qc.invalidateQueries({ queryKey: ["badges", user?.id] });
       qc.invalidateQueries({ queryKey: ["points-total", user?.id] });
     },
     onError: (e: Error) => {
-      const msg = e.message.includes("duplicate") ? "오늘은 이미 출석했어요" : e.message;
-      toast({ title: "출석 실패", description: msg, variant: "destructive" });
+      const msg = e.message.includes("duplicate") ? t.attendance.alreadyChecked : e.message;
+      toast({ title: t.attendance.checkFail, description: msg, variant: "destructive" });
     },
   });
 
@@ -60,33 +62,34 @@ const Attendance = () => {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const monthCount = records?.size ?? 0;
+  const weekdays = t.attendance.weekdays.split(",");
 
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로"><ArrowLeft className="h-5 w-5" /></button>
-        <h1 className="text-lg font-bold">출석체크</h1>
+        <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.back}><ArrowLeft className="h-5 w-5" /></button>
+        <h1 className="text-lg font-bold">{t.attendance.title}</h1>
       </header>
 
       <section className="px-4 pt-5">
         <div className="gradient-primary rounded-2xl p-5 text-primary-foreground">
-          <div className="flex items-center gap-2 mb-1"><Flame className="h-5 w-5" /><p className="text-sm">이번 달 출석</p></div>
-          <p className="text-3xl font-bold">{monthCount}일</p>
-          <p className="text-xs text-white/80 mt-1">매일 출석하면 10P 적립!</p>
+          <div className="flex items-center gap-2 mb-1"><Flame className="h-5 w-5" /><p className="text-sm">{t.attendance.thisMonth}</p></div>
+          <p className="text-3xl font-bold">{monthCount}{t.attendance.days}</p>
+          <p className="text-xs text-white/80 mt-1">{t.attendance.dailyPoints}</p>
         </div>
       </section>
 
       <section className="px-4 pt-5">
         <Button onClick={() => checkIn.mutate()} disabled={!!checkedToday || checkIn.isPending} className="w-full h-14 rounded-2xl text-base font-bold gradient-primary">
-          {checkedToday ? <><Check className="h-5 w-5 mr-2" />오늘 출석 완료</> : checkIn.isPending ? "처리 중..." : "오늘 출석하기"}
+          {checkedToday ? <><Check className="h-5 w-5 mr-2" />{t.attendance.checkedIn}</> : checkIn.isPending ? t.attendance.processing : t.attendance.checkIn}
         </Button>
       </section>
 
       <section className="px-4 pt-5">
         <div className="bg-card rounded-2xl p-4 shadow-soft">
-          <div className="flex items-center gap-2 mb-3"><CalIcon className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">{yyyy}년 {mm + 1}월</h3></div>
+          <div className="flex items-center gap-2 mb-3"><CalIcon className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">{yyyy}. {mm + 1}</h3></div>
           <div className="grid grid-cols-7 text-center text-[10px] text-muted-foreground mb-1">
-            {["일", "월", "화", "수", "목", "금", "토"].map((d) => <div key={d}>{d}</div>)}
+            {weekdays.map((d) => <div key={d}>{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {cells.map((d, i) => {
@@ -105,7 +108,7 @@ const Attendance = () => {
       </section>
 
       <section className="px-4 pt-6 pb-6">
-        <div className="flex items-center gap-2 mb-3"><Award className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">획득 뱃지 ({badges?.length ?? 0})</h3></div>
+        <div className="flex items-center gap-2 mb-3"><Award className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">{t.attendance.badges} ({badges?.length ?? 0})</h3></div>
         {badges && badges.length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {badges.map((b) => (
@@ -116,7 +119,7 @@ const Attendance = () => {
               </div>
             ))}
           </div>
-        ) : <p className="text-xs text-muted-foreground py-4 text-center">아직 획득한 뱃지가 없어요. 출석을 시작해보세요!</p>}
+        ) : <p className="text-xs text-muted-foreground py-4 text-center">{t.attendance.noBadges}</p>}
       </section>
     </MobileShell>
   );

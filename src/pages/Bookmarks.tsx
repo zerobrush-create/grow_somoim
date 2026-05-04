@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Tab = "group" | "class";
 
 const Bookmarks = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("group");
 
   const { data: items, isLoading } = useQuery({
@@ -36,31 +38,36 @@ const Bookmarks = () => {
     },
   });
 
-  if (loading) return <div className="p-8 text-center text-sm text-muted-foreground">불러오는 중...</div>;
+  if (loading) return <div className="p-8 text-center text-sm text-muted-foreground">{t.bookmarks.loading}</div>;
   if (!user) return <Navigate to="/login" replace />;
+
+  const tabItems: { id: Tab; label: string }[] = [
+    { id: "group", label: t.bookmarks.tabGroups },
+    { id: "class", label: t.bookmarks.tabClasses },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.back}>
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold flex-1">찜 목록</h1>
+          <h1 className="text-base font-bold flex-1">{t.bookmarks.title}</h1>
         </header>
 
         <div className="flex border-b border-border">
-          {(["group","class"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)} className={cn(
+          {tabItems.map((tabItem) => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)} className={cn(
               "flex-1 py-2.5 text-sm font-semibold border-b-2 transition-smooth",
-              tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground"
-            )}>{t === "group" ? "모임" : "클래스"}</button>
+              tab === tabItem.id ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+            )}>{tabItem.label}</button>
           ))}
         </div>
 
         <div className="p-4 space-y-3">
           {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-10">불러오는 중...</p>
+            <p className="text-center text-sm text-muted-foreground py-10">{t.bookmarks.loading}</p>
           ) : items && items.length > 0 ? (
             items.map((b: any) => (
               <Link key={b.id} to={tab === "group" ? `/groups/${b.item.id}` : `/classes/${b.item.id}`} className="flex items-center gap-3 bg-card rounded-2xl p-3 border border-border">
@@ -77,7 +84,7 @@ const Bookmarks = () => {
           ) : (
             <div className="text-center py-16 text-sm text-muted-foreground">
               <Heart className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              아직 찜한 항목이 없어요
+              {t.bookmarks.empty}
             </div>
           )}
         </div>

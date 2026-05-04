@@ -11,11 +11,19 @@ import { FollowButton } from "@/components/FollowButton";
 import { ReportDialog } from "@/components/ReportDialog";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { BlockButton } from "@/components/BlockButton";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+const INTEREST_KEY_MAP: Record<string, "exercise"|"music"|"reading"|"travel"|"cooking"|"photo"|"gaming"|"movie"|"study"|"volunteer"|"finance"|"pet"> = {
+  "운동": "exercise", "음악": "music", "독서": "reading", "여행": "travel",
+  "요리": "cooking", "사진": "photo", "게임": "gaming", "영화": "movie",
+  "공부": "study", "봉사": "volunteer", "재테크": "finance", "반려동물": "pet",
+};
 
 const PublicProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", id],
@@ -47,7 +55,7 @@ const PublicProfile = () => {
   });
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-32 w-full" /></div>;
-  if (!profile) return <div className="p-10 text-center text-sm text-muted-foreground">존재하지 않는 사용자예요</div>;
+  if (!profile) return <div className="p-10 text-center text-sm text-muted-foreground">{t.publicProfile.notFound}</div>;
 
   const isMe = user?.id === profile.id;
 
@@ -56,13 +64,13 @@ const PublicProfile = () => {
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center"><ArrowLeft className="h-5 w-5" /></button>
-          <h1 className="text-base font-bold flex-1">프로필</h1>
+          <h1 className="text-base font-bold flex-1">{t.publicProfile.title}</h1>
         </header>
 
         <section className="p-4">
           <div className="bg-card rounded-2xl p-5 shadow-soft text-center">
             <Avatar className="h-20 w-20 mx-auto"><AvatarImage src={profile.avatar_url ?? undefined} /><AvatarFallback><User className="h-8 w-8" /></AvatarFallback></Avatar>
-            <h2 className="text-lg font-bold mt-3">{profile.name ?? "회원"}</h2>
+            <h2 className="text-lg font-bold mt-3">{profile.name ?? t.publicProfile.member}</h2>
             {profile.mbti && <Badge className="mt-1">{profile.mbti}</Badge>}
             {profile.location && <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-2"><MapPin className="h-3 w-3" />{profile.location}</p>}
             {profile.bio && <p className="text-sm text-muted-foreground mt-3 whitespace-pre-line">{profile.bio}</p>}
@@ -70,15 +78,15 @@ const PublicProfile = () => {
             <div className="flex justify-center gap-6 mt-4 text-sm">
               <Link to={`/users/${profile.id}/follows`} className="text-center hover:opacity-70">
                 <p className="font-bold">{followers ?? 0}</p>
-                <p className="text-xs text-muted-foreground">팔로워</p>
+                <p className="text-xs text-muted-foreground">{t.publicProfile.followers}</p>
               </Link>
               <Link to={`/users/${profile.id}/follows`} className="text-center hover:opacity-70">
                 <p className="font-bold">{following ?? 0}</p>
-                <p className="text-xs text-muted-foreground">팔로잉</p>
+                <p className="text-xs text-muted-foreground">{t.publicProfile.following}</p>
               </Link>
               <div className="text-center">
                 <p className="font-bold">{groups?.length ?? 0}</p>
-                <p className="text-xs text-muted-foreground">모임</p>
+                <p className="text-xs text-muted-foreground">{t.publicProfile.groups}</p>
               </div>
             </div>
 
@@ -87,7 +95,7 @@ const PublicProfile = () => {
                 <FollowButton targetUserId={profile.id} size="default" />
                 {user && (
                   <Button variant="outline" onClick={() => navigate(`/dm/${profile.id}`)} className="flex-1">
-                    <MessageCircle className="h-4 w-4 mr-1" /> 메시지
+                    <MessageCircle className="h-4 w-4 mr-1" /> {t.publicProfile.message}
                   </Button>
                 )}
               </div>
@@ -102,16 +110,19 @@ const PublicProfile = () => {
 
           {profile.interests && profile.interests.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-sm font-bold mb-2">관심사</h3>
+              <h3 className="text-sm font-bold mb-2">{t.publicProfile.interests}</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.interests.map((i) => <Badge key={i} variant="secondary" className="bg-primary-soft text-primary border-0">{i}</Badge>)}
+                {profile.interests.map((i) => {
+                  const key = INTEREST_KEY_MAP[i];
+                  return <Badge key={i} variant="secondary" className="bg-primary-soft text-primary border-0">{key ? t.interests[key] : i}</Badge>;
+                })}
               </div>
             </div>
           )}
 
           {groups && groups.length > 0 && (
             <div className="mt-5">
-              <h3 className="text-sm font-bold mb-2">참여 모임</h3>
+              <h3 className="text-sm font-bold mb-2">{t.publicProfile.joinedGroups}</h3>
               <div className="space-y-2">
                 {groups.map((g) => (
                   <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 bg-card rounded-xl p-2 border border-border">
@@ -124,7 +135,7 @@ const PublicProfile = () => {
           )}
 
           <div className="mt-5">
-            <h3 className="text-sm font-bold mb-2">활동</h3>
+            <h3 className="text-sm font-bold mb-2">{t.publicProfile.activity}</h3>
             <ActivityFeed userId={profile.id} />
           </div>
         </section>

@@ -4,10 +4,12 @@ import { ArrowLeft, Hash, Users } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const TagSearch = () => {
   const { tag } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const decoded = decodeURIComponent(tag ?? "").toLowerCase();
 
   const { data: groups, isLoading } = useQuery({
@@ -34,12 +36,12 @@ const TagSearch = () => {
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로"><ArrowLeft className="h-5 w-5" /></button>
+        <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={t.common.back}><ArrowLeft className="h-5 w-5" /></button>
         <h1 className="text-lg font-bold flex items-center gap-1.5"><Hash className="h-5 w-5 text-primary" />{decoded}</h1>
       </header>
 
       <section className="px-4 pt-4">
-        <h2 className="text-sm font-bold mb-2">관련 모임</h2>
+        <h2 className="text-sm font-bold mb-2">{t.tagSearch.relatedGroups}</h2>
         {isLoading ? <Skeleton className="h-20" /> : groups && groups.length > 0 ? (
           <div className="space-y-2">
             {groups.map((g) => (
@@ -55,11 +57,11 @@ const TagSearch = () => {
               </Link>
             ))}
           </div>
-        ) : <p className="text-xs text-muted-foreground py-4">관련 모임이 없어요</p>}
+        ) : <p className="text-xs text-muted-foreground py-4">{t.tagSearch.noGroups}</p>}
       </section>
 
       <section className="px-4 pt-6 pb-6">
-        <h2 className="text-sm font-bold mb-2">관련 게시글</h2>
+        <h2 className="text-sm font-bold mb-2">{t.tagSearch.relatedPosts}</h2>
         {posts && posts.length > 0 ? (
           <div className="space-y-2">
             {posts.map((p) => (
@@ -69,7 +71,7 @@ const TagSearch = () => {
               </Link>
             ))}
           </div>
-        ) : <p className="text-xs text-muted-foreground py-4">관련 게시글이 없어요</p>}
+        ) : <p className="text-xs text-muted-foreground py-4">{t.tagSearch.noPosts}</p>}
       </section>
     </MobileShell>
   );

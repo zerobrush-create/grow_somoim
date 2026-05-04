@@ -7,9 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FollowButton } from "@/components/FollowButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Recommendations = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const { data: profile } = useQuery({
     queryKey: ["rec-profile", user?.id],
@@ -17,7 +19,6 @@ const Recommendations = () => {
     queryFn: async () => (await supabase.from("profiles").select("interests,location").eq("id", user!.id).maybeSingle()).data,
   });
 
-  // AI-powered recommendations via edge function
   const { data: aiRecs, isLoading: aiLoading, isError: aiError } = useQuery({
     queryKey: ["ai-recs", user?.id],
     enabled: !!user,
@@ -32,7 +33,6 @@ const Recommendations = () => {
     },
   });
 
-  // People you may know: most-followed users you don't already follow
   const { data: people, isLoading: peopleLoading } = useQuery({
     queryKey: ["rec-people", user?.id],
     enabled: !!user,
@@ -54,7 +54,6 @@ const Recommendations = () => {
     },
   });
 
-  // Group recommendations: score by interest match + location + member count
   const { data: recGroups, isLoading: groupsLoading } = useQuery({
     queryKey: ["rec-groups", user?.id, profile?.interests, profile?.location],
     enabled: !!user,
@@ -85,22 +84,22 @@ const Recommendations = () => {
   return (
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border">
-        <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-accent" />추천</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">관심사·인기도 기반 맞춤 추천</p>
+        <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-accent" />{t.recommendations.title}</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">{t.recommendations.subtitle}</p>
       </header>
 
-      {!user && <div className="text-center py-20 text-sm text-muted-foreground">로그인하면 맞춤 추천을 받을 수 있어요</div>}
+      {!user && <div className="text-center py-20 text-sm text-muted-foreground">{t.recommendations.loginRequired}</div>}
 
       {user && (
         <>
           <section className="px-4 pt-5">
             <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5">
-              <Wand2 className="h-4 w-4 text-accent" />AI 맞춤 추천
+              <Wand2 className="h-4 w-4 text-accent" />{t.recommendations.aiRecs}
             </h2>
             {aiLoading ? (
               <Skeleton className="h-24" />
             ) : aiError ? (
-              <p className="text-xs text-muted-foreground py-4">AI 추천을 불러오지 못했어요</p>
+              <p className="text-xs text-muted-foreground py-4">{t.recommendations.aiError}</p>
             ) : aiRecs && aiRecs.length > 0 ? (
               <div className="space-y-2">
                 {aiRecs.map((r) => (
@@ -111,7 +110,7 @@ const Recommendations = () => {
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] text-primary font-semibold">{r.group.category}</p>
-                      <span className="text-[10px] text-muted-foreground">매칭 {Math.round(r.score)}%</span>
+                      <span className="text-[10px] text-muted-foreground">{t.recommendations.matchPct} {Math.round(r.score)}%</span>
                     </div>
                     <p className="text-sm font-bold mt-0.5">{r.group.name}</p>
                     <p className="text-[11px] text-foreground/80 mt-1 leading-relaxed">💡 {r.reason}</p>
@@ -119,12 +118,12 @@ const Recommendations = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">추천할 모임이 없어요</p>
+              <p className="text-xs text-muted-foreground py-4">{t.recommendations.noAiRecs}</p>
             )}
           </section>
 
           <section className="px-4 pt-5">
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5"><UserPlus className="h-4 w-4 text-primary" />알 수도 있는 사람</h2>
+            <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5"><UserPlus className="h-4 w-4 text-primary" />{t.recommendations.people}</h2>
             {peopleLoading ? <Skeleton className="h-20" /> : people && people.length > 0 ? (
               <div className="space-y-2">
                 {people.map((p) => (
@@ -133,18 +132,18 @@ const Recommendations = () => {
                       <Avatar className="h-12 w-12"><AvatarImage src={p.profile?.avatar_url ?? undefined} /><AvatarFallback>{(p.profile?.nickname || p.profile?.name || "?").slice(0,1)}</AvatarFallback></Avatar>
                     </Link>
                     <Link to={`/users/${p.id}`} className="flex-1 min-w-0">
-                      <p className="text-sm font-bold truncate">{p.profile?.nickname || p.profile?.name || "익명"}</p>
-                      <p className="text-[11px] text-muted-foreground">팔로워 {p.score}명</p>
+                      <p className="text-sm font-bold truncate">{p.profile?.nickname || p.profile?.name || "?"}</p>
+                      <p className="text-[11px] text-muted-foreground">{t.recommendations.followers} {p.score}</p>
                     </Link>
                     <FollowButton targetUserId={p.id} />
                   </div>
                 ))}
               </div>
-            ) : <p className="text-xs text-muted-foreground py-6">추천할 사람이 없어요</p>}
+            ) : <p className="text-xs text-muted-foreground py-6">{t.recommendations.noPeople}</p>}
           </section>
 
           <section className="px-4 pt-7 pb-6">
-            <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5"><Users className="h-4 w-4 text-primary" />추천 모임</h2>
+            <h2 className="text-sm font-bold mb-3 flex items-center gap-1.5"><Users className="h-4 w-4 text-primary" />{t.recommendations.recGroups}</h2>
             {groupsLoading ? <Skeleton className="h-20" /> : recGroups && recGroups.length > 0 ? (
               <div className="space-y-2">
                 {recGroups.map((g) => (
@@ -156,12 +155,12 @@ const Recommendations = () => {
                       <p className="text-[11px] text-primary font-semibold">{g.category}</p>
                       <p className="text-sm font-bold truncate">{g.name}</p>
                       <p className="text-[11px] text-muted-foreground truncate">{g.description}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{g.location} · {g.members}명</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{g.location} · {g.members}{t.groups.membersUnit}</p>
                     </div>
                   </Link>
                 ))}
               </div>
-            ) : <p className="text-xs text-muted-foreground py-6">추천할 모임이 없어요</p>}
+            ) : <p className="text-xs text-muted-foreground py-6">{t.recommendations.noGroups}</p>}
           </section>
         </>
       )}

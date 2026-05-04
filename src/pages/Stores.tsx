@@ -6,11 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Stores = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { t } = useLanguage();
 
   const { data: stores, isLoading } = useQuery({
     queryKey: ["stores"],
@@ -28,15 +30,15 @@ const Stores = () => {
 
   const pay = useMutation({
     mutationFn: async ({ storeId, amount }: { storeId: number; amount: number }) => {
-      if (!user) throw new Error("로그인이 필요합니다");
-      if ((pointsTotal ?? 0) < amount) throw new Error("포인트가 부족해요");
+      if (!user) throw new Error("login required");
+      if ((pointsTotal ?? 0) < amount) throw new Error(t.payment.insufficient);
       const { error: txErr } = await supabase.from("store_transactions").insert({ store_id: storeId, user_id: user.id, amount });
       if (txErr) throw txErr;
-      const { error: pErr } = await supabase.from("points").insert({ user_id: user.id, amount: -amount, type: "use", description: "가맹점 결제" });
+      const { error: pErr } = await supabase.from("points").insert({ user_id: user.id, amount: -amount, type: "use", description: t.stores.title });
       if (pErr) throw pErr;
     },
-    onSuccess: () => { toast({ title: "결제 완료" }); qc.invalidateQueries({ queryKey: ["points-total", user?.id] }); },
-    onError: (e: Error) => toast({ title: "결제 실패", description: e.message, variant: "destructive" }),
+    onSuccess: () => { toast({ title: t.stores.paySuccess }); qc.invalidateQueries({ queryKey: ["points-total", user?.id] }); },
+    onError: (e: Error) => toast({ title: t.stores.payFail, description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -44,13 +46,13 @@ const Stores = () => {
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center"><ArrowLeft className="h-5 w-5" /></button>
-          <h1 className="text-base font-bold flex-1">가맹점</h1>
+          <h1 className="text-base font-bold flex-1">{t.stores.title}</h1>
         </header>
 
         <section className="p-4">
           <div className="gradient-primary rounded-2xl p-4 text-primary-foreground flex items-center justify-between">
             <div>
-              <p className="text-xs text-white/80">사용 가능 포인트</p>
+              <p className="text-xs text-white/80">{t.stores.availablePoints}</p>
               <p className="text-2xl font-bold mt-0.5">{(pointsTotal ?? 0).toLocaleString()} P</p>
             </div>
             <Coins className="h-10 w-10 text-white/30" />
@@ -78,7 +80,7 @@ const Stores = () => {
                 </div>
               )}
             </div>
-          )) : <p className="text-center text-sm text-muted-foreground py-12">등록된 가맹점이 없어요</p>}
+          )) : <p className="text-center text-sm text-muted-foreground py-12">{t.stores.empty}</p>}
         </div>
       </div>
     </div>
