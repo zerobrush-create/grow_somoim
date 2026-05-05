@@ -64,6 +64,12 @@ const Profile = () => {
     queryFn: async () => (await supabase.from("user_roles").select("role").eq("user_id", user!.id)).data ?? [],
   });
 
+  const { data: appUser } = useQuery({
+    queryKey: ["my-app-user", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.from("users").select("referral_code").eq("id", user!.id).maybeSingle()).data,
+  });
+
   const { data: myGroups } = useQuery({
     queryKey: ["my-groups", user?.id],
     enabled: !!user,
@@ -82,7 +88,7 @@ const Profile = () => {
   if (!user) return <Navigate to="/login" replace />;
 
   const name = profile?.name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "회원";
-  const referralCode = user.id.slice(0, 8).toUpperCase();
+  const referralCode = appUser?.referral_code ?? user.id.replace(/-/g, "").slice(0, 8).toUpperCase();
   const isAdmin = roles?.some((r) => r.role === "admin");
   const isInstructor = roles?.some((r) => r.role === "instructor");
 

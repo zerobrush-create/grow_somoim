@@ -29,12 +29,13 @@ const Login = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
 
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
     const ref = searchParams.get("ref");
     const forceMode = searchParams.get("mode");
-    if (ref) setReferralCode(ref.toUpperCase());
+    if (ref) setReferralCode(normalizeReferralCode(ref));
     if (forceMode === "signup" || ref) setMode("signup");
   }, []);
 
@@ -64,15 +65,10 @@ const Login = () => {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { name: name || email.split("@")[0], referral_code: referralCode.trim() || null },
+            data: { name: name || email.split("@")[0], referral_code: normalizeReferralCode(referralCode) || null },
           },
         });
         if (error) throw error;
-        const { data: session } = await supabase.auth.getSession();
-        const newUserId = session.session?.user.id;
-        if (newUserId && referralCode.trim()) {
-          await supabase.from("referrals").insert({ referrer_id: referralCode.trim(), referred_user_id: newUserId });
-        }
         setMode("verify_email");
         startResendCooldown();
       } else {
@@ -282,7 +278,7 @@ const Login = () => {
                 <Input
                   id="ref"
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  onChange={(e) => setReferralCode(normalizeReferralCode(e.target.value))}
                   placeholder="친구의 추천 코드 (예: AB12CD34)"
                   className={`h-12 rounded-xl border-0 font-mono tracking-widest uppercase ${referralCode ? "bg-primary-soft text-primary" : "bg-muted"}`}
                   maxLength={8}
