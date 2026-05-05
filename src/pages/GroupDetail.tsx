@@ -15,7 +15,7 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type Tab = "intro" | "events" | "board" | "photos" | "notices" | "reviews";
+type Tab = "intro" | "chat" | "events" | "board" | "photos" | "notices" | "reviews";
 
 const GroupDetail = () => {
   const { id } = useParams();
@@ -30,6 +30,7 @@ const GroupDetail = () => {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "intro", label: t.groupDetail.tabIntro },
+    { id: "chat", label: t.groupDetail.tabChat },
     { id: "events", label: t.groupDetail.tabEvents },
     { id: "board", label: t.groupDetail.tabBoard },
     { id: "photos", label: t.groupDetail.tabPhotos },
@@ -256,6 +257,18 @@ const GroupDetail = () => {
                 {group.description || t.groupDetail.noDescription}
               </p>
             </section>
+          )}
+          {activeTab === "chat" && (
+            <div className="px-4 py-6 text-center">
+              <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.chatDesc}</p>
+              <Button
+                variant="outline"
+                onClick={() => navigate((isMember || isOwner) ? `/groups/${group.id}/chat` : "/chat")}
+              >
+                {t.groupDetail.goToChat}
+              </Button>
+            </div>
           )}
           {activeTab === "events" && (
             <div className="px-4 py-6 text-center">
