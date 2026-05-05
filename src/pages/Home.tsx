@@ -10,6 +10,17 @@ import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/grow-logo.png";
 
+type HomeGroup = {
+  id: string;
+  name: string;
+  category: string | null;
+  location: string | null;
+  image_url: string | null;
+  description?: string | null;
+  owner_id?: string | null;
+  created_at?: string | null;
+};
+
 const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -143,7 +154,7 @@ const Home = () => {
       </section>
 
       <section className="px-4 pt-6">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-3 [@media_(min-width:600px)]:grid-cols-8">
           {categories.slice(0, 8).map((c) => (
             <Link key={c.id} to="/groups" className="flex flex-col items-center gap-1.5 group">
               <div className="h-14 w-14 rounded-2xl bg-primary-soft flex items-center justify-center text-2xl transition-smooth group-hover:scale-105 group-hover:shadow-soft">{c.emoji}</div>
@@ -155,7 +166,7 @@ const Home = () => {
 
       <section className="px-4 pt-6">
         <h3 className="text-xs font-bold text-muted-foreground mb-2">{t.home.quickMenu}</h3>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2 [@media_(min-width:600px)]:grid-cols-8 [@media_(min-width:600px)]:gap-3">
           {quickMenu.map((m) => (
             <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
               <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
@@ -175,9 +186,9 @@ const Home = () => {
           </div>
           <Link to="/groups" className="text-xs text-muted-foreground flex items-center">{t.home.seeAll} <ChevronRight className="h-3 w-3" /></Link>
         </div>
-        <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide [@media_(min-width:600px)]:grid [@media_(min-width:600px)]:grid-cols-3 [@media_(min-width:600px)]:overflow-visible">
           {(recommended ?? []).map((g) => (
-            <Link key={g.id} to={`/groups/${g.id}`} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden shadow-soft transition-smooth hover:shadow-card hover:-translate-y-0.5">
+            <Link key={g.id} to={`/groups/${g.id}`} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden shadow-soft transition-smooth hover:shadow-card hover:-translate-y-0.5 [@media_(min-width:600px)]:w-full">
               <div className="aspect-[4/3] overflow-hidden bg-muted flex items-center justify-center">
                 {g.image_url ? <img src={g.image_url} alt={g.name} loading="lazy" className="h-full w-full object-cover" /> : <Users className="h-8 w-8 text-muted-foreground/30" />}
               </div>
@@ -200,9 +211,9 @@ const Home = () => {
               <p className="text-xs text-muted-foreground mt-0.5">{t.home.forYouSub}</p>
             </div>
           </div>
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide [@media_(min-width:600px)]:grid [@media_(min-width:600px)]:grid-cols-3 [@media_(min-width:600px)]:overflow-visible">
             {forYou.map((g) => (
-              <Link key={g.id} to={`/groups/${g.id}`} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden shadow-soft hover:-translate-y-0.5 transition-smooth">
+              <Link key={g.id} to={`/groups/${g.id}`} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden shadow-soft hover:-translate-y-0.5 transition-smooth [@media_(min-width:600px)]:w-full">
                 <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
                   {g.image_url ? <img src={g.image_url} alt={g.name} loading="lazy" className="h-full w-full object-cover" /> : <Users className="h-8 w-8 text-muted-foreground/30" />}
                 </div>
@@ -221,7 +232,7 @@ const Home = () => {
         <section className="pt-7 px-4">
           <h3 className="text-lg font-bold flex items-center gap-1.5 mb-3"><UserPlus className="h-5 w-5 text-primary" />{t.home.followFeed}</h3>
           <div className="space-y-2">
-            {followingFeed.map((g: any) => (
+            {followingFeed.map((g: HomeGroup) => (
               <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 bg-card rounded-2xl p-3 shadow-soft hover:shadow-card transition-smooth">
                 <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center">
                   {g.image_url ? <img src={g.image_url} alt={g.name} className="h-full w-full object-cover" /> : <Users className="h-5 w-5 text-muted-foreground/30" />}
@@ -242,7 +253,7 @@ const Home = () => {
           <h3 className="text-lg font-bold flex items-center gap-1.5"><TrendingUp className="h-5 w-5 text-accent" />{t.home.trending}</h3>
         </div>
         <div className="space-y-3">
-          {(hot ?? []).map((g: any) => (
+          {(hot ?? []).map((g: HomeGroup) => (
             <Link key={g.id} to={`/groups/${g.id}`} className="flex gap-3 bg-card rounded-2xl p-3 shadow-soft transition-smooth hover:shadow-card">
               <div className="h-20 w-20 rounded-xl overflow-hidden bg-muted flex-shrink-0 flex items-center justify-center">
                 {g.image_url ? <img src={g.image_url} alt={g.name} loading="lazy" className="h-full w-full object-cover" /> : <Users className="h-6 w-6 text-muted-foreground/30" />}
