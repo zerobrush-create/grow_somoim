@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp, Search as SearchIcon, UserCog, Coins, Trash2 } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Users as UsersIcon, BookOpen, Flag, MessageSquare, Download, TrendingUp, Search as SearchIcon, UserCog, Coins, Trash2, Archive, RotateCcw, CheckCircle2, XCircle, Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +39,12 @@ const Admin = () => {
     queryKey: ["admin-banners"],
     enabled: !!isAdmin,
     queryFn: async () => (await supabase.from("banners").select("*").order("order")).data ?? [],
+  });
+
+  const { data: pointHistory } = useQuery({
+    queryKey: ["admin-points"],
+    enabled: !!isAdmin,
+    queryFn: async () => (await supabase.from("points").select("id,user_id,amount,type,description,created_at").order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
 
   const { data: roles } = useQuery({
@@ -141,9 +147,9 @@ const Admin = () => {
     queryFn: async () => {
       const term = `%${userSearch.trim()}%`;
       const { data } = await supabase
-        .from("profiles")
-        .select("id,email,name,nickname,location,created_at")
-        .or(`nickname.ilike.${term},email.ilike.${term},name.ilike.${term}`)
+        .from("users")
+        .select("id,email,first_name,last_name,nickname,profile_location,role,show_groups,created_at")
+        .or(`nickname.ilike.${term},email.ilike.${term},first_name.ilike.${term},last_name.ilike.${term}`)
         .limit(20);
       return data ?? [];
     },
@@ -157,6 +163,33 @@ const Admin = () => {
     },
     onSuccess: () => { toast({ title: "역할이 부여되었어요" }); setGrantId(""); qc.invalidateQueries({ queryKey: ["admin-user-roles"] }); },
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const grantRoleToUser = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "instructor" | "member" }) => {
+      const { error: roleError } = await supabase.from("user_roles").insert({ user_id: userId, role });
+      if (roleError && !roleError.message.toLowerCase().includes("duplicate")) throw roleError;
+      const { error: userError } = await supabase.from("users").update({ role }).eq("id", userId);
+      if (userError) throw userError;
+    },
+    onSuccess: () => {
+      toast({ title: "역할이 변경되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      qc.invalidateQueries({ queryKey: ["admin-user-search"] });
+    },
+    onError: (e: Error) => toast({ title: "역할 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const updateUserVisibility = useMutation({
+    mutationFn: async ({ userId, showGroups }: { userId: string; showGroups: boolean }) => {
+      const { error } = await supabase.from("users").update({ show_groups: showGroups }).eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "회원 설정이 저장되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-user-search"] });
+    },
+    onError: (e: Error) => toast({ title: "저장 실패", description: e.message, variant: "destructive" }),
   });
 
   const revokeRole = useMutation({
@@ -215,6 +248,25 @@ const Admin = () => {
   const [newBannerImageUrl, setNewBannerImageUrl] = useState("");
   const [newBannerLinkUrl, setNewBannerLinkUrl] = useState("");
   const [newBannerOrder, setNewBannerOrder] = useState("10");
+  const [bannerUploading, setBannerUploading] = useState(false);
+
+  const uploadBannerImage = async (file: File | null) => {
+    if (!file || !user) return;
+    setBannerUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/admin-banners/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("post-images").upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+      setNewBannerImageUrl(data.publicUrl);
+      toast({ title: "이미지가 업로드되었어요" });
+    } catch (e) {
+      toast({ title: "이미지 업로드 실패", description: e instanceof Error ? e.message : "다시 시도해주세요", variant: "destructive" });
+    } finally {
+      setBannerUploading(false);
+    }
+  };
 
   const createBanner = useMutation({
     mutationFn: async () => {
@@ -241,10 +293,12 @@ const Admin = () => {
   const { data: allGroups } = useQuery({
     queryKey: ["admin-groups"],
     enabled: !!isAdmin,
-    queryFn: async () => (await supabase.from("groups").select("id,name,category,location,owner_id,created_at").order("created_at", { ascending: false }).limit(100)).data ?? [],
+    queryFn: async () => (await supabase.from("groups").select("id,name,category,location,owner_id,status,max_members,created_at").order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
 
   const [groupSearch, setGroupSearch] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupDraft, setGroupDraft] = useState({ name: "", category: "", location: "", max_members: "" });
 
   const deleteGroup = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("groups").delete().eq("id", id); if (error) throw error; },
@@ -252,10 +306,92 @@ const Admin = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  const updateGroup = useMutation({
+    mutationFn: async (id: string) => {
+      if (!groupDraft.name.trim()) throw new Error("모임명을 입력하세요");
+      const { error } = await supabase.from("groups").update({
+        name: groupDraft.name.trim(),
+        category: groupDraft.category.trim() || "취미",
+        location: groupDraft.location.trim() || null,
+        max_members: groupDraft.max_members ? Number(groupDraft.max_members) : null,
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "모임 정보가 저장되었어요" });
+      setEditingGroupId(null);
+      qc.invalidateQueries({ queryKey: ["admin-groups"] });
+    },
+    onError: (e: Error) => toast({ title: "저장 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const updateGroupStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "active" | "archived" }) => {
+      const { error } = await supabase.from("groups").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "모임 상태가 변경되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-groups"] });
+    },
+    onError: (e: Error) => toast({ title: "상태 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
   const filteredGroups = useMemo(() => {
     const term = groupSearch.trim().toLowerCase();
     return term ? (allGroups ?? []).filter((g) => g.name?.toLowerCase().includes(term) || g.category?.toLowerCase().includes(term)) : (allGroups ?? []);
   }, [allGroups, groupSearch]);
+
+  // 클래스 관리
+  const { data: allClasses } = useQuery({
+    queryKey: ["admin-classes"],
+    enabled: !!isAdmin,
+    queryFn: async () => (await supabase.from("classes").select("id,title,category,instructor_id,location,price,status,payment_status,admin_note,created_at").order("created_at", { ascending: false }).limit(100)).data ?? [],
+  });
+
+  const [classSearch, setClassSearch] = useState("");
+  const [classNoteDraft, setClassNoteDraft] = useState<Record<number, string>>({});
+
+  const filteredClasses = useMemo(() => {
+    const term = classSearch.trim().toLowerCase();
+    return term ? (allClasses ?? []).filter((c) => c.title?.toLowerCase().includes(term) || c.category?.toLowerCase().includes(term) || c.instructor_id?.toLowerCase().includes(term)) : (allClasses ?? []);
+  }, [allClasses, classSearch]);
+
+  const updateClassStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: "pending" | "approved" | "rejected" }) => {
+      const { error } = await supabase.from("classes").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "클래스 상태가 변경되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-classes"] });
+    },
+    onError: (e: Error) => toast({ title: "상태 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const saveClassNote = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("classes").update({ admin_note: classNoteDraft[id] ?? "" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "관리 메모가 저장되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-classes"] });
+    },
+    onError: (e: Error) => toast({ title: "메모 저장 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteClass = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("classes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "클래스가 삭제되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-classes"] });
+    },
+    onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
+  });
 
   // 포인트 지급
   const [pointUserId, setPointUserId] = useState("");
@@ -278,8 +414,18 @@ const Admin = () => {
     onSuccess: () => {
       toast({ title: "포인트가 지급되었어요" });
       setPointUserId(""); setPointAmount(""); setPointReason("");
+      qc.invalidateQueries({ queryKey: ["admin-points"] });
     },
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const deletePoint = useMutation({
+    mutationFn: async (id: number) => { const { error } = await supabase.from("points").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => {
+      toast({ title: "포인트 내역이 삭제되었어요" });
+      qc.invalidateQueries({ queryKey: ["admin-points"] });
+    },
+    onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
   });
 
   if (loading || roleLoading) return <div className="p-8 text-center text-sm text-muted-foreground">불러오는 중...</div>;
@@ -418,6 +564,7 @@ const Admin = () => {
                 <TabsTrigger value="roles" className="flex-shrink-0 text-xs px-3 py-1.5">역할</TabsTrigger>
                 <TabsTrigger value="users" className="flex-shrink-0 text-xs px-3 py-1.5">유저</TabsTrigger>
                 <TabsTrigger value="groups" className="flex-shrink-0 text-xs px-3 py-1.5">모임</TabsTrigger>
+                <TabsTrigger value="classes" className="flex-shrink-0 text-xs px-3 py-1.5">클래스</TabsTrigger>
                 <TabsTrigger value="points" className="flex-shrink-0 text-xs px-3 py-1.5">포인트</TabsTrigger>
               </TabsList>
 
@@ -460,6 +607,11 @@ const Admin = () => {
               <p className="text-sm font-semibold">배너 직접 생성</p>
               <Input placeholder="제목 *" value={newBannerTitle} onChange={(e) => setNewBannerTitle(e.target.value)} />
               <Input placeholder="이미지 URL (선택)" value={newBannerImageUrl} onChange={(e) => setNewBannerImageUrl(e.target.value)} />
+              <label className="flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border text-xs font-medium text-muted-foreground hover:bg-muted">
+                <Upload className="h-3.5 w-3.5" />
+                {bannerUploading ? "업로드 중..." : "이미지 업로드"}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadBannerImage(e.target.files?.[0] ?? null)} />
+              </label>
               <Input placeholder="링크 URL (선택)" value={newBannerLinkUrl} onChange={(e) => setNewBannerLinkUrl(e.target.value)} />
               <Input placeholder="순서 (기본 10)" type="number" value={newBannerOrder} onChange={(e) => setNewBannerOrder(e.target.value)} />
               <Button size="sm" className="w-full" onClick={() => createBanner.mutate()} disabled={createBanner.isPending}>배너 생성</Button>
@@ -518,18 +670,28 @@ const Admin = () => {
                   <div key={u.id} className="bg-card rounded-xl p-3 border border-border">
                     <div className="flex items-start gap-2">
                       <div className="h-9 w-9 rounded-full bg-primary-soft text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {(u.nickname ?? u.name ?? u.email ?? "?").slice(0, 1).toUpperCase()}
+                        {(u.nickname ?? u.first_name ?? u.email ?? "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{u.nickname ?? u.name ?? "—"}</p>
+                        <p className="text-sm font-semibold truncate">{u.nickname ?? [u.first_name, u.last_name].filter(Boolean).join(" ") ?? "—"}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
                         <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">{u.id}</p>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline">{u.role}</Badge>
+                          <Badge variant={u.show_groups === false ? "secondary" : "outline"}>{u.show_groups === false ? "모임 숨김" : "모임 공개"}</Badge>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
+                    <div className="grid grid-cols-2 gap-2 mt-3">
                       <Button size="sm" variant="outline" onClick={() => navigate(`/users/${u.id}`)} className="flex-1">프로필</Button>
                       <Button size="sm" variant="outline" onClick={() => { setGrantId(u.id); toast({ title: "역할 부여 폼에 추가되었어요" }); }} className="gap-1">
                         <UserCog className="h-3.5 w-3.5" />역할
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => grantRoleToUser.mutate({ userId: u.id, role: "admin" })} className="gap-1">
+                        <ShieldAlert className="h-3.5 w-3.5" />관리자 추가
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => updateUserVisibility.mutate({ userId: u.id, showGroups: u.show_groups === false })}>
+                        {u.show_groups === false ? "모임 공개" : "모임 숨김"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => { setPointUserId(u.id); toast({ title: "포인트 폼에 추가되었어요" }); }} className="gap-1">
                         <Coins className="h-3.5 w-3.5" />포인트
@@ -553,23 +715,104 @@ const Admin = () => {
               </div>
             </div>
             {filteredGroups.length > 0 ? filteredGroups.map((g) => (
-              <div key={g.id} className="bg-card rounded-xl p-3 border border-border flex items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{g.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{g.category}{g.location ? ` · ${g.location}` : ""}</p>
-                  <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{g.id}</p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive flex-shrink-0 gap-1"
-                  onClick={() => { if (window.confirm(`"${g.name}" 모임을 삭제할까요?`)) deleteGroup.mutate(g.id); }}
-                  disabled={deleteGroup.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />삭제
-                </Button>
+              <div key={g.id} className="bg-card rounded-xl p-3 border border-border space-y-3">
+                {editingGroupId === g.id ? (
+                  <div className="space-y-2">
+                    <Input placeholder="모임명" value={groupDraft.name} onChange={(e) => setGroupDraft({ ...groupDraft, name: e.target.value })} />
+                    <Input placeholder="카테고리" value={groupDraft.category} onChange={(e) => setGroupDraft({ ...groupDraft, category: e.target.value })} />
+                    <Input placeholder="지역" value={groupDraft.location} onChange={(e) => setGroupDraft({ ...groupDraft, location: e.target.value })} />
+                    <Input placeholder="정원" type="number" value={groupDraft.max_members} onChange={(e) => setGroupDraft({ ...groupDraft, max_members: e.target.value })} />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={() => updateGroup.mutate(g.id)}>저장</Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditingGroupId(null)}>취소</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{g.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{g.category}{g.location ? ` · ${g.location}` : ""}{g.max_members ? ` · 정원 ${g.max_members}` : ""}</p>
+                        <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{g.id}</p>
+                      </div>
+                      <Badge variant={g.status === "active" ? "default" : "secondary"}>{g.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setEditingGroupId(g.id);
+                        setGroupDraft({ name: g.name, category: g.category, location: g.location ?? "", max_members: g.max_members ? String(g.max_members) : "" });
+                      }}>수정</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        onClick={() => updateGroupStatus.mutate({ id: g.id, status: g.status === "active" ? "archived" : "active" })}
+                      >
+                        {g.status === "active" ? <Archive className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        {g.status === "active" ? "보관" : "복구"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive gap-1"
+                        onClick={() => { if (window.confirm(`"${g.name}" 모임을 삭제할까요?`)) deleteGroup.mutate(g.id); }}
+                        disabled={deleteGroup.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />삭제
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )) : <p className="text-center text-sm text-muted-foreground py-8">모임이 없어요</p>}
+          </TabsContent>
+
+          <TabsContent value="classes" className="space-y-3 mt-4">
+            <div className="bg-card rounded-xl p-3 border border-border">
+              <div className="flex items-center gap-2">
+                <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                <Input placeholder="클래스명·카테고리·강사 UUID 검색" value={classSearch} onChange={(e) => setClassSearch(e.target.value)} />
+              </div>
+            </div>
+            {filteredClasses.length > 0 ? filteredClasses.map((c) => (
+              <div key={c.id} className="bg-card rounded-xl p-3 border border-border space-y-3">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{c.title}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{c.category ?? "미분류"}{c.location ? ` · ${c.location}` : ""}{c.price ? ` · ${c.price}` : ""}</p>
+                    <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">강사 {c.instructor_id}</p>
+                  </div>
+                  <Badge variant={c.status === "approved" ? "default" : c.status === "pending" ? "secondary" : "outline"}>{c.status}</Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => updateClassStatus.mutate({ id: c.id, status: "approved" })}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />승인
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => updateClassStatus.mutate({ id: c.id, status: "rejected" })}>
+                    <XCircle className="h-3.5 w-3.5" />거절
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => updateClassStatus.mutate({ id: c.id, status: "pending" })}>대기</Button>
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="관리 메모"
+                    value={classNoteDraft[c.id] ?? c.admin_note ?? ""}
+                    onChange={(e) => setClassNoteDraft({ ...classNoteDraft, [c.id]: e.target.value })}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => saveClassNote.mutate(c.id)}>메모 저장</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive gap-1"
+                      onClick={() => { if (window.confirm(`"${c.title}" 클래스를 삭제할까요?`)) deleteClass.mutate(c.id); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />삭제
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )) : <p className="text-center text-sm text-muted-foreground py-8">클래스가 없어요</p>}
           </TabsContent>
 
           <TabsContent value="points" className="space-y-3 mt-4">
@@ -581,6 +824,20 @@ const Admin = () => {
               <Button size="sm" className="w-full" onClick={() => grantPoints.mutate()} disabled={grantPoints.isPending}>지급하기</Button>
             </div>
             <p className="text-xs text-muted-foreground text-center px-2">유저 검색 탭에서 포인트 버튼을 누르면 UUID가 자동 입력됩니다.</p>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">최근 포인트 내역</p>
+              {pointHistory?.length ? pointHistory.map((p) => (
+                <div key={p.id} className="bg-card rounded-xl p-3 border border-border flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${p.amount >= 0 ? "text-primary" : "text-destructive"}`}>{p.amount >= 0 ? "+" : ""}{p.amount.toLocaleString()}P</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{p.description ?? p.type}</p>
+                    <p className="text-[10px] text-muted-foreground/60 truncate">{p.user_id}</p>
+                  </div>
+                  <Badge variant="outline">{p.type}</Badge>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => { if (window.confirm("이 포인트 내역을 삭제할까요?")) deletePoint.mutate(p.id); }}>삭제</Button>
+                </div>
+              )) : <p className="text-center text-sm text-muted-foreground py-6">포인트 내역이 없어요</p>}
+            </div>
           </TabsContent>
             </Tabs>
           </TabsContent>
