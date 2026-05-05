@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Video, Paperclip, Languages } from "lucide-react";
+import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,16 @@ type Message = {
   sender_id: string;
   created_at: string;
 };
+
+type SenderProfile = {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+};
+
+const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || "사용자";
+const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
 
 const GroupChat = () => {
   const { id } = useParams();
@@ -64,11 +74,35 @@ const GroupChat = () => {
     queryKey: ["chat-senders", id, senderIds.join(",")],
     enabled: senderIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
+      const [{ data: profiles }, { data: appUsers }] = await Promise.all([
+        supabase
         .from("profiles")
-        .select("id,name,avatar_url,email")
-        .in("id", senderIds);
-      return new Map((data ?? []).map((p) => [p.id as string, p]));
+          .select("id,name,nickname,avatar_url,email")
+          .in("id", senderIds),
+        supabase
+        .from("users")
+          .select("id,nickname,email,first_name,last_name,profile_image_url")
+          .in("id", senderIds),
+      ]);
+      const map = new Map<string, SenderProfile>();
+      (appUsers ?? []).forEach((u) => {
+        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+        map.set(u.id, {
+          id: u.id,
+          name: u.nickname || fullName || null,
+          avatar_url: u.profile_image_url,
+          email: u.email,
+        });
+      });
+      (profiles ?? []).forEach((p) => {
+        map.set(p.id, {
+          id: p.id,
+          name: p.name || p.nickname || null,
+          avatar_url: p.avatar_url,
+          email: p.email,
+        });
+      });
+      return map;
     },
   });
 
@@ -79,7 +113,7 @@ const GroupChat = () => {
       .channel(`group-messages-${id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${id}` },
+        { event: "*", schema: "public", table: "group_messages", filter: `group_id=eq.${id}` },
         () => {
           qc.invalidateQueries({ queryKey: ["group-messages", id] });
         }
@@ -170,10 +204,19 @@ const GroupChat = () => {
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: number) => {
+      const { error } = await supabase.from("group_messages").delete().eq("id", messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["group-messages", id] }),
+    onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
+  });
+
   useEffect(() => {
     if (!autoTranslate || !messages || !user) return;
     autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id !== user.id })));
-  }, [autoTranslate, messages, user]);
+  }, [autoTranslate, autoTranslateMessages, messages, user]);
 
   if (!user) {
     navigate("/login");
@@ -234,11 +277,11 @@ const GroupChat = () => {
                   {!mine && (
                     <Avatar className="h-8 w-8 mt-auto">
                       <AvatarImage src={s?.avatar_url ?? undefined} />
-                      <AvatarFallback>{(s?.name ?? s?.email ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{getSenderInitial(s)}</AvatarFallback>
                     </Avatar>
                   )}
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
-                    {!mine && <span className="text-xs text-muted-foreground mb-0.5">{s?.name ?? s?.email ?? "?"}</span>}
+                    {!mine && <span className="text-xs text-muted-foreground mb-0.5">{getSenderName(s)}</span>}
                     {isImg ? (
                       <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
                     ) : (
@@ -253,6 +296,17 @@ const GroupChat = () => {
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    {mine && (
+                      <button
+                        type="button"
+                        onClick={() => { if (window.confirm("이 메시지를 삭제할까요?")) deleteMessage.mutate(m.id); }}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive"
+                        disabled={deleteMessage.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        삭제
+                      </button>
+                    )}
                   </div>
                 </div>
               );

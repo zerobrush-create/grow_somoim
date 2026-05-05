@@ -1,5 +1,15 @@
 import { Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { Language } from "@/i18n/translations";
+
+const LABELS: Record<Language, { translating: string; show: string; hide: string; ai: string; translation: string }> = {
+  ko: { translating: "번역 중...", show: "번역 보기", hide: "번역 숨기기", ai: "AI", translation: "번역" },
+  en: { translating: "Translating...", show: "Translate", hide: "Hide translation", ai: "AI", translation: "Translation" },
+  ja: { translating: "翻訳中...", show: "翻訳を見る", hide: "翻訳を隠す", ai: "AI", translation: "翻訳" },
+  zh: { translating: "翻译中...", show: "查看翻译", hide: "隐藏翻译", ai: "AI", translation: "翻译" },
+  ru: { translating: "Перевод...", show: "Перевести", hide: "Скрыть перевод", ai: "AI", translation: "Перевод" },
+};
 
 type TranslatedMessageBubbleProps = {
   mine: boolean;
@@ -16,6 +26,9 @@ export const TranslatedMessageBubble = ({
   isTranslating,
   onTranslate,
 }: TranslatedMessageBubbleProps) => {
+  const { lang } = useLanguage();
+  const labels = LABELS[lang];
+
   return (
     <div className={cn("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
       <div
@@ -40,7 +53,7 @@ export const TranslatedMessageBubble = ({
         )}
       >
         <Languages className="h-3 w-3" />
-        {isTranslating ? "번역 중..." : translatedText ? "번역 숨기기" : "번역 보기"}
+        {isTranslating ? labels.translating : translatedText ? labels.hide : labels.show}
       </button>
 
       {translatedText && (
@@ -51,8 +64,8 @@ export const TranslatedMessageBubble = ({
           )}
         >
           <div className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold text-primary">
-            <span className="rounded bg-primary/10 px-1">AI</span>
-            <span>번역</span>
+            <span className="rounded bg-primary/10 px-1">{labels.ai}</span>
+            <span>{labels.translation}</span>
           </div>
           <p className="whitespace-pre-wrap break-words leading-relaxed">{translatedText}</p>
         </div>

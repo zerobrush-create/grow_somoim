@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, MoreVertical, ShieldOff, Paperclip, Languages } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, ShieldOff, Paperclip, Languages, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,16 @@ import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 
 type DM = { id: number; content: string; sender_id: string; receiver_id: string; created_at: string; is_read: boolean };
+
+type ChatProfile = {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+};
+
+const profileName = (profile?: ChatProfile | null) => profile?.name || profile?.email || "사용자";
+const profileInitial = (profile?: ChatProfile | null) => profileName(profile).trim().slice(0, 1).toUpperCase();
 
 const DirectMessage = () => {
   const { peerId } = useParams();
@@ -38,7 +48,33 @@ const DirectMessage = () => {
   const { data: peer } = useQuery({
     queryKey: ["dm-peer", peerId],
     enabled: !!peerId,
-    queryFn: async () => (await supabase.from("profiles").select("id,name,avatar_url,email").eq("id", peerId!).maybeSingle()).data,
+    queryFn: async (): Promise<ChatProfile | null> => {
+      const [{ data: profile }, { data: appUser }] = await Promise.all([
+        supabase.from("profiles").select("id,name,nickname,avatar_url,email").eq("id", peerId!).maybeSingle(),
+        supabase.from("users").select("id,nickname,email,first_name,last_name,profile_image_url").eq("id", peerId!).maybeSingle(),
+      ]);
+
+      if (profile) {
+        return {
+          id: profile.id,
+          name: profile.name || profile.nickname || null,
+          avatar_url: profile.avatar_url,
+          email: profile.email,
+        };
+      }
+
+      if (appUser) {
+        const fullName = [appUser.first_name, appUser.last_name].filter(Boolean).join(" ").trim();
+        return {
+          id: appUser.id,
+          name: appUser.nickname || fullName || null,
+          avatar_url: appUser.profile_image_url,
+          email: appUser.email,
+        };
+      }
+
+      return null;
+    },
   });
 
   const { data: messages, isLoading } = useQuery({
@@ -60,8 +96,8 @@ const DirectMessage = () => {
     if (!user || !peerId) return;
     const channel = supabase
       .channel(`dm-${user.id}-${peerId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, (payload) => {
-        const m = payload.new as DM;
+      .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, (payload) => {
+        const m = (payload.new && Object.keys(payload.new).length > 0 ? payload.new : payload.old) as DM;
         if ((m.sender_id === user.id && m.receiver_id === peerId) || (m.sender_id === peerId && m.receiver_id === user.id)) {
           qc.invalidateQueries({ queryKey: ["dm-thread", user.id, peerId] });
         }
@@ -174,10 +210,22 @@ const DirectMessage = () => {
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: number) => {
+      const { error } = await supabase.from("direct_messages").delete().eq("id", messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dm-thread", user?.id, peerId] });
+      qc.invalidateQueries({ queryKey: ["dm-threads", user?.id] });
+    },
+    onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
+  });
+
   useEffect(() => {
     if (!autoTranslate || !messages || !peerId) return;
     autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id === peerId })));
-  }, [autoTranslate, messages, peerId]);
+  }, [autoTranslate, autoTranslateMessages, messages, peerId]);
 
   if (!user) { navigate("/login"); return null; }
 
@@ -188,9 +236,9 @@ const DirectMessage = () => {
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <Avatar className="h-9 w-9"><AvatarImage src={peer?.avatar_url ?? undefined} /><AvatarFallback>{(peer?.name ?? peer?.email ?? "?").slice(0,1)}</AvatarFallback></Avatar>
+          <Avatar className="h-9 w-9"><AvatarImage src={peer?.avatar_url ?? undefined} /><AvatarFallback>{profileInitial(peer)}</AvatarFallback></Avatar>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate">{peer?.name ?? peer?.email ?? "사용자"}</h1>
+            <h1 className="text-base font-bold truncate">{profileName(peer)}</h1>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <span className={cn("h-1.5 w-1.5 rounded-full inline-block", peerOnline ? "bg-emerald-500" : "bg-muted-foreground/40")} />
               {peerOnline ? "온라인" : peerLastSeen ? `마지막 접속 ${new Date(peerLastSeen).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : "오프라인"}
@@ -229,7 +277,7 @@ const DirectMessage = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>사용자를 차단할까요?</AlertDialogTitle>
               <AlertDialogDescription>
-                차단하면 {peer?.name ?? "이 사용자"}의 메시지를 더 이상 받지 않습니다. 차단 목록은 내 정보에서 관리할 수 있어요.
+                차단하면 {profileName(peer)}의 메시지를 더 이상 받지 않습니다. 차단 목록은 내 정보에서 관리할 수 있어요.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -267,6 +315,17 @@ const DirectMessage = () => {
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    {mine && (
+                      <button
+                        type="button"
+                        onClick={() => { if (window.confirm("이 메시지를 삭제할까요?")) deleteMessage.mutate(m.id); }}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive"
+                        disabled={deleteMessage.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        삭제
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Languages, Send, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,8 +10,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useMessageTranslation } from "@/hooks/useMessageTranslation";
+import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 
 type Msg = { id: number; content: string; sender_id: string; created_at: string };
+
+type SenderProfile = {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+};
+
+const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || "사용자";
+const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
 
 const ClassChat = () => {
   const { id } = useParams();
@@ -21,6 +33,7 @@ const ClassChat = () => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
 
   const { data: cls } = useQuery({
     queryKey: ["class-meta", idNum],
@@ -45,15 +58,36 @@ const ClassChat = () => {
     queryKey: ["class-chat-senders", idNum, senderIds.join(",")],
     enabled: senderIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id,name,avatar_url,email").in("id", senderIds);
-      return new Map((data ?? []).map((p) => [p.id as string, p]));
+      const [{ data: profiles }, { data: appUsers }] = await Promise.all([
+        supabase.from("profiles").select("id,name,nickname,avatar_url,email").in("id", senderIds),
+        supabase.from("users").select("id,nickname,email,first_name,last_name,profile_image_url").in("id", senderIds),
+      ]);
+      const map = new Map<string, SenderProfile>();
+      (appUsers ?? []).forEach((u) => {
+        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+        map.set(u.id, {
+          id: u.id,
+          name: u.nickname || fullName || null,
+          avatar_url: u.profile_image_url,
+          email: u.email,
+        });
+      });
+      (profiles ?? []).forEach((p) => {
+        map.set(p.id, {
+          id: p.id,
+          name: p.name || p.nickname || null,
+          avatar_url: p.avatar_url,
+          email: p.email,
+        });
+      });
+      return map;
     },
   });
 
   useEffect(() => {
     if (!idNum) return;
     const channel = supabase.channel(`class-messages-${idNum}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "class_messages", filter: `class_id=eq.${idNum}` },
+      .on("postgres_changes", { event: "*", schema: "public", table: "class_messages", filter: `class_id=eq.${idNum}` },
         () => qc.invalidateQueries({ queryKey: ["class-messages", idNum] }))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -72,6 +106,20 @@ const ClassChat = () => {
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: number) => {
+      const { error } = await supabase.from("class_messages").delete().eq("id", messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["class-messages", idNum] }),
+    onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (!autoTranslate || !messages || !user) return;
+    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id !== user.id })));
+  }, [autoTranslate, autoTranslateMessages, messages, user]);
+
   if (!user) { navigate("/login"); return null; }
 
   return (
@@ -82,6 +130,14 @@ const ClassChat = () => {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-base font-bold flex-1 truncate">{cls?.title ?? "클래스 채팅"}</h1>
+          <button
+            onClick={() => setAutoTranslate(!autoTranslate)}
+            className={cn("h-9 w-9 rounded-full flex items-center justify-center transition-smooth relative", autoTranslate ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground hover:text-foreground")}
+            aria-label="자동번역 토글"
+          >
+            <Languages className="h-4 w-4" />
+            {autoTranslate && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />}
+          </button>
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -89,13 +145,32 @@ const ClassChat = () => {
             messages && messages.length > 0 ? messages.map((m) => {
               const mine = m.sender_id === user.id;
               const s = senders?.get(m.sender_id);
+              const translatedText = translated[m.id];
+              const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
-                  {!mine && <Avatar className="h-8 w-8 mt-auto"><AvatarImage src={s?.avatar_url ?? undefined} /><AvatarFallback>{(s?.name ?? "?").slice(0,1)}</AvatarFallback></Avatar>}
+                  {!mine && <Avatar className="h-8 w-8 mt-auto"><AvatarImage src={s?.avatar_url ?? undefined} /><AvatarFallback>{getSenderInitial(s)}</AvatarFallback></Avatar>}
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
-                    {!mine && <span className="text-xs text-muted-foreground mb-0.5">{s?.name ?? s?.email ?? "?"}</span>}
-                    <div className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words", mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>{m.content}</div>
+                    {!mine && <span className="text-xs text-muted-foreground mb-0.5">{getSenderName(s)}</span>}
+                    <TranslatedMessageBubble
+                      mine={mine}
+                      content={m.content}
+                      translatedText={translatedText}
+                      isTranslating={isTranslating}
+                      onTranslate={() => translate(m.id, m.content)}
+                    />
                     <span className="text-[10px] text-muted-foreground mt-0.5">{new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    {mine && (
+                      <button
+                        type="button"
+                        onClick={() => { if (window.confirm("이 메시지를 삭제할까요?")) deleteMessage.mutate(m.id); }}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive"
+                        disabled={deleteMessage.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        삭제
+                      </button>
+                    )}
                   </div>
                 </div>
               );
