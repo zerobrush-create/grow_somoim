@@ -173,7 +173,7 @@ const GroupCreate = () => {
         const { error: upErr } = await supabase.storage
           .from("group-images")
           .upload(path, imageFile, { cacheControl: "3600", upsert: false });
-        if (upErr) throw upErr;
+        if (upErr) throw new Error(`이미지 업로드 실패: ${upErr.message}`);
         const { data: pub } = supabase.storage.from("group-images").getPublicUrl(path);
         imageUrl = pub.publicUrl;
       }
@@ -194,16 +194,19 @@ const GroupCreate = () => {
         })
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) throw new Error(`모임 저장 실패: ${error.message}`);
 
       // owner를 자동으로 멤버에 추가 (실패해도 모임 생성은 성공)
-      await supabase.from("memberships").insert({
+      const { error: memberError } = await supabase.from("memberships").insert({
         group_id: data.id,
         user_id: user.id,
         role: "owner",
         status: "approved",
         joined_at: new Date().toISOString(),
       });
+      if (memberError) {
+        toast({ title: "모임은 생성됐지만 멤버 등록에 실패했어요", description: memberError.message, variant: "destructive" });
+      }
 
       return data.id as string;
     },

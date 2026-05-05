@@ -92,7 +92,7 @@ const App = () => (
           <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/groups" element={<Groups />} />
-          <Route path="/groups/new" element={<GroupCreate />} />
+          <Route path="/groups/new" element={<ProtectedRoute><GroupCreate /></ProtectedRoute>} />
           <Route path="/groups/:id/edit" element={<GroupEdit />} />
           <Route path="/groups/:id/requests" element={<GroupRequests />} />
           <Route path="/groups/:id/chat" element={<GroupChat />} />
