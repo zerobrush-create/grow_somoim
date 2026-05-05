@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReportDialog } from "@/components/ReportDialog";
 import { useMessageTranslation } from "@/hooks/useMessageTranslation";
+import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 
 type DM = { id: number; content: string; sender_id: string; receiver_id: string; created_at: string; is_read: boolean };
 
@@ -255,32 +256,13 @@ const DirectMessage = () => {
                     {isImg ? (
                       <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => !isImg && translate(m.id, m.content)}
-                        className={cn(
-                          "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words text-left relative",
-                          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
-                        )}
-                      >
-                        {m.content}
-                        {isTranslating && (
-                          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-background flex items-center justify-center">
-                            <span className="h-2.5 w-2.5 rounded-full border border-primary border-t-transparent animate-spin" />
-                          </span>
-                        )}
-                      </button>
-                    )}
-                    {translatedText && (
-                      <div className={cn(
-                        "mt-1 px-3 py-1.5 rounded-xl text-xs text-muted-foreground bg-muted/60 border border-border max-w-full",
-                        mine ? "items-end" : "items-start"
-                      )}>
-                        <span className="inline-flex items-center gap-1 mb-0.5 text-[10px] font-semibold text-primary">
-                          <span className="bg-primary/10 rounded px-1">AI</span> 번역
-                        </span>
-                        <p className="whitespace-pre-wrap break-words">{translatedText}</p>
-                      </div>
+                      <TranslatedMessageBubble
+                        mine={mine}
+                        content={m.content}
+                        translatedText={translatedText}
+                        isTranslating={isTranslating}
+                        onTranslate={() => translate(m.id, m.content)}
+                      />
                     )}
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
