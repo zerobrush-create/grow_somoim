@@ -109,10 +109,11 @@ const Groups = () => {
           <h1 className="text-xl font-bold flex-1">{t.nav.groups}</h1>
           <Link
             to="/groups/new"
-            className="p-2 rounded-full hover:bg-muted transition-smooth"
-            aria-label="모임 만들기"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-soft transition-smooth hover:bg-primary/90"
+            aria-label="소모임 개설"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
+            <span>소모임 개설</span>
           </Link>
         </div>
         <form onSubmit={onSearchSubmit} className="relative mb-3">
