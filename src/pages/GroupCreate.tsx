@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { translateRuntimeText } from "@/i18n/runtimeTranslations";
 
 const CATEGORIES = ["운동", "스터디", "취미", "맛집", "여행", "음악", "반려동물"];
 const MAX_TAGS = 5;
@@ -48,7 +50,9 @@ type FieldErrors = Partial<Record<"name" | "category" | "location" | "maxMembers
 const GroupCreate = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { lang } = useLanguage();
   const qc = useQueryClient();
+  const tr = (value: string) => translateRuntimeText(value, lang);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<string>("");
@@ -285,7 +289,7 @@ const GroupCreate = () => {
             ) : (
               <label className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-border hover:bg-muted/50 cursor-pointer transition-smooth">
                 <ImagePlus className="h-6 w-6 text-muted-foreground mb-1" />
-                <span className="text-sm text-muted-foreground">이미지 추가 (최대 {MAX_IMAGE_MB}MB)</span>
+                <span className="text-sm text-muted-foreground">{tr(`이미지 추가 (최대 ${MAX_IMAGE_MB}MB)`)}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -365,7 +369,7 @@ const GroupCreate = () => {
 
           {/* 태그 */}
           <div className="space-y-2">
-            <Label htmlFor="tag">태그 (선택, 최대 {MAX_TAGS}개)</Label>
+            <Label htmlFor="tag">{tr(`태그 (선택, 최대 ${MAX_TAGS}개)`)}</Label>
             <div className="flex gap-2">
               <Input
                 id="tag"
