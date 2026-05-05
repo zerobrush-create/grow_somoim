@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,11 @@ const Login = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
+  const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/";
 
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
@@ -40,8 +42,8 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(redirectTo, { replace: true });
+  }, [user, navigate, redirectTo]);
 
   const startResendCooldown = () => {
     setResendCooldown(60);
@@ -75,7 +77,7 @@ const Login = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast({ title: "환영해요!", description: "로그인되었어요." });
-        navigate("/", { replace: true });
+        navigate(redirectTo, { replace: true });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "잠시 후 다시 시도해 주세요.";
