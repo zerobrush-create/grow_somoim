@@ -17,6 +17,9 @@ const translateTextNode = (node: Text, lang: ReturnType<typeof useLanguage>["lan
   if (/[가-힣]/.test(current) && current !== original) {
     original = current;
   }
+  if (!/[가-힣]/.test(original) && current !== original) {
+    original = current;
+  }
   if (!textOrigins.has(node) || original === current) textOrigins.set(node, original);
   const next = translateRuntimeText(original, lang);
   if (node.nodeValue !== next) node.nodeValue = next;
@@ -30,6 +33,9 @@ const translateElementAttrs = (el: Element, lang: ReturnType<typeof useLanguage>
     const dataAttr = `data-i18n-original-${attr}`;
     let original = el.getAttribute(dataAttr) ?? current;
     if (/[가-힣]/.test(current) && current !== original) {
+      original = current;
+    }
+    if (!/[가-힣]/.test(original) && current !== original) {
       original = current;
     }
     if (!el.hasAttribute(dataAttr) || original === current) el.setAttribute(dataAttr, original);
