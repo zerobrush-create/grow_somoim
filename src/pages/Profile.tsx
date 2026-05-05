@@ -132,6 +132,11 @@ const Profile = () => {
           <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="다크모드 토글">
             {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
+          {isAdmin && (
+            <button onClick={() => navigate("/admin")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label={t.profile.adminPage}>
+              <Shield className="h-5 w-5" />
+            </button>
+          )}
           <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-muted transition-smooth" aria-label="알림">
             <Bell className="h-5 w-5" />
             {unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
