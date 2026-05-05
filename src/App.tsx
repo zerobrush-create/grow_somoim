@@ -12,6 +12,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RealtimeNotifier } from "./components/RealtimeNotifier";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { OnboardingTour } from "./components/OnboardingTour";
+import { RuntimeI18n } from "./components/RuntimeI18n";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -79,6 +80,7 @@ const App = () => (
   <LanguageProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RuntimeI18n />
       <Toaster />
       <Sonner />
       <BrowserRouter>
