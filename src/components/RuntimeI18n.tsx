@@ -23,7 +23,7 @@ const translateTextNode = (node: Text, lang: ReturnType<typeof useLanguage>["lan
 };
 
 const translateElementAttrs = (el: Element, lang: ReturnType<typeof useLanguage>["lang"]) => {
-  if (el.closest("script, style, code, pre, textarea, [data-i18n-skip]")) return;
+  if (el.closest("script, style, code, pre, [data-i18n-skip]")) return;
   for (const attr of ATTRS) {
     const current = el.getAttribute(attr);
     if (!current) continue;
