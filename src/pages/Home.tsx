@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays, LogIn } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -26,6 +27,17 @@ const Home = () => {
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
   const { t } = useLanguage();
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    const seenIntro = sessionStorage.getItem("grow_intro_seen");
+    if (seenIntro) return;
+
+    setShowIntro(true);
+    sessionStorage.setItem("grow_intro_seen", "1");
+    const timer = window.setTimeout(() => setShowIntro(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const { data: banners } = useQuery({
     queryKey: ["banners-active"],
@@ -103,6 +115,19 @@ const Home = () => {
     t.categories[id as keyof typeof t.categories] ?? id;
 
   return (
+    <>
+    {showIntro && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 animate-fade-in">
+          <img src={logo} alt="GROW" className="h-24 w-24 rounded-full shadow-glow animate-scale-in" />
+          <div className="text-center">
+            <p className="text-2xl font-black tracking-normal">GROW</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t.home.introTagline}</p>
+          </div>
+        </div>
+      </div>
+    )}
+
     <MobileShell>
       <header className="sticky top-0 z-30 gradient-hero pt-3 pb-3 px-4">
         <div className="flex items-center justify-between mb-3">
@@ -126,6 +151,25 @@ const Home = () => {
           <Search className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">{t.home.searchPlaceholder}</span>
         </Link>
+
+        {!user && (
+          <div className="mt-3 grid grid-cols-[1fr_1fr] gap-2">
+            <Link
+              to="/signup"
+              className="h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1.5 shadow-soft"
+            >
+              <UserPlus className="h-4 w-4" />
+              {t.home.signupCta}
+            </Link>
+            <Link
+              to="/login"
+              className="h-11 rounded-2xl bg-card text-foreground text-sm font-bold flex items-center justify-center gap-1.5 shadow-soft"
+            >
+              <LogIn className="h-4 w-4" />
+              {t.home.loginCta}
+            </Link>
+          </div>
+        )}
       </header>
 
       <section className="px-4 pt-5">
@@ -274,6 +318,7 @@ const Home = () => {
 
       <div className="h-6" />
     </MobileShell>
+    </>
   );
 };
 

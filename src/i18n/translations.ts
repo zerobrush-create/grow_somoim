@@ -49,6 +49,7 @@ export const translations = {
       followingNew: "팔로잉이 새로 만든 모임", trending: "지금 뜨는 모임", noGroups: "아직 모임이 없어요",
       quickPoints: "포인트", quickStores: "가맹점", quickRecommend: "추천", quickCalendar: "캘린더",
       quickAds: "광고신청", quickLeaders: "리더", quickInstructor: "강사신청", quickAdmin: "관리자",
+      signupCta: "회원가입", loginCta: "로그인", introTagline: "함께 성장하는 시간",
     },
     categories: {
       all: "전체", exercise: "운동", study: "스터디", hobby: "취미",
@@ -193,6 +194,7 @@ export const translations = {
       followingNew: "New group by someone you follow", trending: "Trending Now", noGroups: "No groups yet",
       quickPoints: "Points", quickStores: "Stores", quickRecommend: "Picks", quickCalendar: "Calendar",
       quickAds: "Advertise", quickLeaders: "Leaders", quickInstructor: "Teach", quickAdmin: "Admin",
+      signupCta: "Sign up", loginCta: "Log in", introTagline: "Time to grow together",
     },
     categories: {
       all: "All", exercise: "Exercise", study: "Study", hobby: "Hobbies",
@@ -337,6 +339,7 @@ export const translations = {
       followingNew: "フォロー中のユーザーが作ったグループ", trending: "今人気のグループ", noGroups: "まだグループがありません",
       quickPoints: "ポイント", quickStores: "加盟店", quickRecommend: "おすすめ", quickCalendar: "カレンダー",
       quickAds: "広告申請", quickLeaders: "リーダー", quickInstructor: "講師申請", quickAdmin: "管理",
+      signupCta: "会員登録", loginCta: "ログイン", introTagline: "一緒に成長する時間",
     },
     categories: {
       all: "全て", exercise: "運動", study: "スタディ", hobby: "趣味",
@@ -481,6 +484,7 @@ export const translations = {
       followingNew: "关注者的新圈子", trending: "热门圈子", noGroups: "暂无圈子",
       quickPoints: "积分", quickStores: "门店", quickRecommend: "推荐", quickCalendar: "日历",
       quickAds: "广告申请", quickLeaders: "排行", quickInstructor: "讲师申请", quickAdmin: "管理",
+      signupCta: "注册", loginCta: "登录", introTagline: "一起成长的时光",
     },
     categories: {
       all: "全部", exercise: "运动", study: "学习", hobby: "兴趣",
@@ -625,6 +629,7 @@ export const translations = {
       followingNew: "Новая группа от подписки", trending: "В тренде", noGroups: "Групп пока нет",
       quickPoints: "Очки", quickStores: "Магазины", quickRecommend: "Рекомендации", quickCalendar: "Календарь",
       quickAds: "Реклама", quickLeaders: "Лидеры", quickInstructor: "Стать тренером", quickAdmin: "Админ",
+      signupCta: "Регистрация", loginCta: "Войти", introTagline: "Время расти вместе",
     },
     categories: {
       all: "Все", exercise: "Спорт", study: "Учёба", hobby: "Хобби",
