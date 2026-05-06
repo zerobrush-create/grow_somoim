@@ -3,18 +3,19 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Language } from "@/i18n/translations";
 
-const LABELS: Record<Language, { translating: string; show: string; hide: string; ai: string; translation: string }> = {
-  ko: { translating: "번역 중...", show: "번역 보기", hide: "번역 숨기기", ai: "AI", translation: "번역" },
-  en: { translating: "Translating...", show: "Translate", hide: "Hide translation", ai: "AI", translation: "Translation" },
-  ja: { translating: "翻訳中...", show: "翻訳を見る", hide: "翻訳を隠す", ai: "AI", translation: "翻訳" },
-  zh: { translating: "翻译中...", show: "查看翻译", hide: "隐藏翻译", ai: "AI", translation: "翻译" },
-  ru: { translating: "Перевод...", show: "Перевести", hide: "Скрыть перевод", ai: "AI", translation: "Перевод" },
+const LABELS: Record<Language, { translating: string; show: string; hide: string; retry: string; ai: string; translation: string }> = {
+  ko: { translating: "번역 중...", show: "번역 보기", hide: "번역 숨기기", retry: "다시 번역", ai: "AI", translation: "번역" },
+  en: { translating: "Translating...", show: "Translate", hide: "Hide translation", retry: "Retry translation", ai: "AI", translation: "Translation" },
+  ja: { translating: "翻訳中...", show: "翻訳を見る", hide: "翻訳を隠す", retry: "もう一度翻訳", ai: "AI", translation: "翻訳" },
+  zh: { translating: "翻译中...", show: "查看翻译", hide: "隐藏翻译", retry: "重新翻译", ai: "AI", translation: "翻译" },
+  ru: { translating: "Перевод...", show: "Перевести", hide: "Скрыть перевод", retry: "Повторить перевод", ai: "AI", translation: "Перевод" },
 };
 
 type TranslatedMessageBubbleProps = {
   mine: boolean;
   content: string;
   translatedText?: string;
+  translationError?: string;
   isTranslating: boolean;
   onTranslate: () => void;
 };
@@ -23,6 +24,7 @@ export const TranslatedMessageBubble = ({
   mine,
   content,
   translatedText,
+  translationError,
   isTranslating,
   onTranslate,
 }: TranslatedMessageBubbleProps) => {
@@ -53,8 +55,14 @@ export const TranslatedMessageBubble = ({
         )}
       >
         <Languages className="h-3 w-3" />
-        {isTranslating ? labels.translating : translatedText ? labels.hide : labels.show}
+        {isTranslating ? labels.translating : translatedText ? labels.hide : translationError ? labels.retry : labels.show}
       </button>
+
+      {translationError && !translatedText && (
+        <p className="max-w-full rounded-2xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {translationError}
+        </p>
+      )}
 
       {translatedText && (
         <div

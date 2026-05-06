@@ -33,7 +33,7 @@ const ClassChat = () => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
+  const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
 
   const { data: cls } = useQuery({
     queryKey: ["class-meta", idNum],
@@ -146,6 +146,7 @@ const ClassChat = () => {
               const mine = m.sender_id === user.id;
               const s = senders?.get(m.sender_id);
               const translatedText = translated[m.id];
+              const translationError = translationErrors[m.id];
               const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
@@ -156,6 +157,7 @@ const ClassChat = () => {
                       mine={mine}
                       content={m.content}
                       translatedText={translatedText}
+                      translationError={translationError}
                       isTranslating={isTranslating}
                       onTranslate={() => translate(m.id, m.content)}
                     />

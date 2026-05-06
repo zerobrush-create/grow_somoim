@@ -38,7 +38,7 @@ const GroupChat = () => {
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
+  const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const [onlineCount, setOnlineCount] = useState(0);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -271,6 +271,7 @@ const GroupChat = () => {
               const s = senders?.get(m.sender_id);
               const isImg = m.content.startsWith("[img:");
               const translatedText = translated[m.id];
+              const translationError = translationErrors[m.id];
               const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
@@ -289,6 +290,7 @@ const GroupChat = () => {
                         mine={mine}
                         content={m.content}
                         translatedText={translatedText}
+                        translationError={translationError}
                         isTranslating={isTranslating}
                         onTranslate={() => translate(m.id, m.content)}
                       />

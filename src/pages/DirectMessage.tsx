@@ -36,7 +36,7 @@ const DirectMessage = () => {
   const [text, setText] = useState("");
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [peerLastSeen, setPeerLastSeen] = useState<string | null>(null);
-  const { translated, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
+  const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [peerTyping, setPeerTyping] = useState(false);
@@ -297,6 +297,7 @@ const DirectMessage = () => {
               const mine = m.sender_id === user.id;
               const isImg = m.content.startsWith("[img:");
               const translatedText = translated[m.id];
+              const translationError = translationErrors[m.id];
               const isTranslating = translating.has(m.id);
               return (
                 <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
@@ -308,6 +309,7 @@ const DirectMessage = () => {
                         mine={mine}
                         content={m.content}
                         translatedText={translatedText}
+                        translationError={translationError}
                         isTranslating={isTranslating}
                         onTranslate={() => translate(m.id, m.content)}
                       />
