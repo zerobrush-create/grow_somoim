@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useGroup } from "@/hooks/useGroups";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -15,7 +17,7 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type Tab = "intro" | "chat" | "events" | "board" | "photos" | "notices" | "reviews";
+type Tab = "intro" | "members" | "chat" | "events" | "board" | "photos" | "notices" | "reviews";
 
 const GroupDetail = () => {
   const { id } = useParams();
@@ -27,9 +29,11 @@ const GroupDetail = () => {
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
+  const { data: members = [], isLoading: membersLoading } = useGroupMembers(id);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "intro", label: t.groupDetail.tabIntro },
+    { id: "members", label: t.groupDetail.tabMembers },
     { id: "chat", label: t.groupDetail.tabChat },
     { id: "events", label: t.groupDetail.tabEvents },
     { id: "board", label: t.groupDetail.tabBoard },
@@ -115,6 +119,25 @@ const GroupDetail = () => {
     if (!user) { navigate("/login"); return; }
     if (myMembership) return;
     join.mutate();
+  };
+
+  const shareInvite = async () => {
+    const url = `${window.location.origin}/groups/${group?.id ?? id}`;
+    try {
+      if (navigator.share && group) {
+        await navigator.share({
+          title: group.name,
+          text: t.groupDetail.inviteShareText,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+      toast({ title: t.groupDetail.inviteCopied });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast({ title: t.groupDetail.inviteFail, variant: "destructive" });
+    }
   };
 
   if (isLoading) {
@@ -256,6 +279,52 @@ const GroupDetail = () => {
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                 {group.description || t.groupDetail.noDescription}
               </p>
+            </section>
+          )}
+          {activeTab === "members" && (
+            <section className="px-4 pt-5 space-y-4">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold">{t.groupDetail.memberList}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{t.groupDetail.inviteDesc}</p>
+                  </div>
+                  <Button size="sm" onClick={shareInvite} className="rounded-xl">
+                    <Share2 className="mr-1.5 h-4 w-4" />
+                    {t.groupDetail.inviteMembers}
+                  </Button>
+                </div>
+              </div>
+
+              {membersLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-14 rounded-2xl" />
+                  <Skeleton className="h-14 rounded-2xl" />
+                </div>
+              ) : members.length > 0 ? (
+                <div className="space-y-2">
+                  {members.map((member) => {
+                    const isGroupOwner = member.userId === group.owner_id;
+                    return (
+                      <div key={member.userId} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                        <Avatar className="h-11 w-11">
+                          <AvatarImage src={member.avatarUrl ?? undefined} />
+                          <AvatarFallback>{member.name.trim().slice(0, 1).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{member.name}</p>
+                          {member.email && <p className="truncate text-xs text-muted-foreground">{member.email}</p>}
+                        </div>
+                        <Badge variant={isGroupOwner ? "default" : "secondary"} className="shrink-0">
+                          {isGroupOwner ? t.groupDetail.ownerRole : t.groupDetail.memberRole}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-sm text-muted-foreground">{t.groupDetail.noMembers}</div>
+              )}
             </section>
           )}
           {activeTab === "chat" && (

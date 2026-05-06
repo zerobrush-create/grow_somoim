@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2, Reply } from "lucide-react";
+import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2, Reply, Users, Share2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 type Message = {
   id: number;
@@ -39,6 +42,7 @@ const GroupChat = () => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -57,10 +61,11 @@ const GroupChat = () => {
     queryKey: ["group-chat-meta", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data } = await supabase.from("groups").select("id,name").eq("id", id!).maybeSingle();
+      const { data } = await supabase.from("groups").select("id,name,owner_id").eq("id", id!).maybeSingle();
       return data;
     },
   });
+  const { data: members = [], isLoading: membersLoading } = useGroupMembers(id);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["group-messages", id],
@@ -232,6 +237,25 @@ const GroupChat = () => {
     autoTranslateMessages(messages.map((m) => ({ id: m.id, content: parseChatMessageContent(m.content).body, isIncoming: m.sender_id !== user.id })));
   }, [autoTranslate, autoTranslateMessages, messages, user]);
 
+  const shareInvite = async () => {
+    const url = `${window.location.origin}/groups/${id}`;
+    try {
+      if (navigator.share && group) {
+        await navigator.share({
+          title: group.name,
+          text: "모임 링크를 공유해서 멤버를 초대해 보세요",
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+      toast({ title: "초대 링크를 복사했어요" });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast({ title: "초대 링크를 복사하지 못했어요", variant: "destructive" });
+    }
+  };
+
   if (!user) {
     navigate("/login");
     return null;
@@ -253,6 +277,13 @@ const GroupChat = () => {
               </p>
             )}
           </div>
+          <button
+            onClick={() => setMembersOpen(true)}
+            className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+            aria-label="멤버 보기"
+          >
+            <Users className="h-5 w-5" />
+          </button>
           <button
             onClick={() => setAutoTranslate(!autoTranslate)}
             className={cn("h-9 w-9 rounded-full flex items-center justify-center transition-smooth relative", autoTranslate ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground hover:text-foreground")}
@@ -378,6 +409,48 @@ const GroupChat = () => {
           </Button>
         </form>
       </div>
+
+      <Dialog open={membersOpen} onOpenChange={setMembersOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>{group?.name ?? "모임 멤버"}</DialogTitle>
+            <DialogDescription>승인된 모임 멤버를 확인하고 초대 링크를 공유할 수 있어요.</DialogDescription>
+          </DialogHeader>
+          <Button onClick={shareInvite} className="w-full rounded-xl">
+            <Share2 className="mr-2 h-4 w-4" />
+            멤버 초대하기
+          </Button>
+          <div className="max-h-[52vh] overflow-y-auto space-y-2 pr-1">
+            {membersLoading ? (
+              <>
+                <Skeleton className="h-14 rounded-2xl" />
+                <Skeleton className="h-14 rounded-2xl" />
+              </>
+            ) : members.length > 0 ? (
+              members.map((member) => {
+                const isGroupOwner = member.userId === group?.owner_id;
+                return (
+                  <div key={member.userId} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={member.avatarUrl ?? undefined} />
+                      <AvatarFallback>{member.name.trim().slice(0, 1).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{member.name}</p>
+                      {member.email && <p className="truncate text-xs text-muted-foreground">{member.email}</p>}
+                    </div>
+                    <Badge variant={isGroupOwner ? "default" : "secondary"} className="shrink-0">
+                      {isGroupOwner ? "모임장" : "멤버"}
+                    </Badge>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-10 text-center text-sm text-muted-foreground">아직 승인된 멤버가 없어요.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
