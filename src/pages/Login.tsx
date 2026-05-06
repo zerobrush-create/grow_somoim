@@ -39,6 +39,14 @@ const Login = () => {
   const isEmbeddedBrowser = /NAVER|KAKAOTALK|FBAN|FBAV|Instagram|Line\/|Twitter|Telegram|DaumApps|; wv\)/i.test(userAgent);
   const signupCompleted = localStorage.getItem("grow_signup_completed") === "1";
 
+  const copyOpenBrowserLink = async () => {
+    await navigator.clipboard?.writeText(window.location.href).catch(() => {});
+    toast({
+      title: "링크를 복사했어요",
+      description: "Safari 또는 Chrome 주소창에 붙여넣으면 Google 로그인을 사용할 수 있어요.",
+    });
+  };
+
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
     const ref = searchParams.get("ref");
@@ -133,12 +141,7 @@ const Login = () => {
 
   const handleGoogle = async () => {
     if (isEmbeddedBrowser) {
-      await navigator.clipboard?.writeText(window.location.href).catch(() => {});
-      toast({
-        title: "Google 로그인이 차단된 브라우저예요",
-        description: "주소를 복사했어요. Safari 또는 Chrome에서 열어 로그인해 주세요.",
-        variant: "destructive",
-      });
+      await copyOpenBrowserLink();
       return;
     }
     if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
@@ -339,7 +342,18 @@ const Login = () => {
 
         {isEmbeddedBrowser && (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
-            Google은 네이버·텔레그램 같은 앱 안 브라우저 로그인을 차단할 수 있어요. 오른쪽 메뉴에서 Safari/Chrome으로 열면 Google 로그인이 됩니다.
+            <p className="font-semibold">현재 앱 안 브라우저로 열렸어요</p>
+            <p className="mt-1">
+              이메일과 카카오 가입은 계속 가능해요. Google만 정책상 Safari/Chrome에서 열어야 합니다.
+            </p>
+            <button
+              type="button"
+              onClick={copyOpenBrowserLink}
+              className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-amber-100 px-3 text-xs font-bold text-amber-950"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              링크 복사해서 Safari/Chrome에서 열기
+            </button>
           </div>
         )}
 
@@ -429,17 +443,28 @@ const Login = () => {
               <p className="text-center text-[11px] text-muted-foreground">
                 소셜 계정으로 처음 시작할 수도 있어요. 가입 후에는 같은 계정으로 로그인됩니다.
               </p>
-              <button
-                type="button"
-                onClick={handleGoogle}
-                disabled={!agreeTerms || !agreePrivacy}
-                className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
-                </svg>
-                Google로 회원가입
-              </button>
+              {isEmbeddedBrowser ? (
+                <button
+                  type="button"
+                  onClick={copyOpenBrowserLink}
+                  className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Safari/Chrome에서 Google로 가입
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGoogle}
+                  disabled={!agreeTerms || !agreePrivacy}
+                  className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
+                  </svg>
+                  Google로 회원가입
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleOAuth("kakao")}
@@ -452,13 +477,19 @@ const Login = () => {
             </>
           ) : (
             <>
-              <button type="button" onClick={handleGoogle} className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
-                </svg>
-                {isEmbeddedBrowser && <ExternalLink className="h-4 w-4" />}
-                Google로 로그인
-              </button>
+              {isEmbeddedBrowser ? (
+                <button type="button" onClick={copyOpenBrowserLink} className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted">
+                  <ExternalLink className="h-4 w-4" />
+                  Safari/Chrome에서 Google로 로그인
+                </button>
+              ) : (
+                <button type="button" onClick={handleGoogle} className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
+                  </svg>
+                  Google로 로그인
+                </button>
+              )}
               <button type="button" onClick={() => handleOAuth("kakao")} className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
                 카카오로 로그인
