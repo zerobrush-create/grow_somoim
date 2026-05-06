@@ -119,19 +119,27 @@ const Login = () => {
   };
 
   const handleGoogle = async () => {
+    if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
+      toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
     });
-    if (error) toast({ title: "Google 로그인 실패", description: error.message, variant: "destructive" });
+    if (error) toast({ title: mode === "signup" ? "Google 회원가입 실패" : "Google 로그인 실패", description: error.message, variant: "destructive" });
   };
 
   const handleOAuth = async (provider: "kakao") => {
+    if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
+      toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/` },
     });
-    if (error) toast({ title: `${provider} 로그인 실패`, description: error.message, variant: "destructive" });
+    if (error) toast({ title: mode === "signup" ? `${provider} 회원가입 실패` : `${provider} 로그인 실패`, description: error.message, variant: "destructive" });
   };
 
   /* ── 이메일 인증 대기 화면 ── */
@@ -362,28 +370,48 @@ const Login = () => {
               >
                 비밀번호를 잊으셨나요?
               </button>
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                처음 이용하시나요? 먼저 <button type="button" onClick={() => setMode("signup")} className="font-semibold text-primary underline">회원가입</button>을 완료해 주세요.
+              </p>
             </div>
           )}
         </form>
 
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">또는</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
+        {mode === "signup" && (
+          <>
+            <div className="flex items-center gap-3 my-6">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">또는</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
 
-        <div className="space-y-2.5">
-          <button type="button" onClick={handleGoogle} className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
-            </svg>
-            Google로 계속하기
-          </button>
-          <button type="button" onClick={() => handleOAuth("kakao")} className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
-            카카오로 계속하기
-          </button>
-        </div>
+            <div className="space-y-2.5">
+              <p className="text-center text-[11px] text-muted-foreground">
+                소셜 계정으로 처음 시작할 수도 있어요. 가입 후에는 같은 계정으로 로그인됩니다.
+              </p>
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={!agreeTerms || !agreePrivacy}
+                className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
+                </svg>
+                Google로 회원가입
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOAuth("kakao")}
+                disabled={!agreeTerms || !agreePrivacy}
+                className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90 disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
+                카카오로 회원가입
+              </button>
+            </div>
+          </>
+        )}
 
         <p className="text-center text-[11px] text-muted-foreground mt-6 leading-relaxed">
           가입하면{" "}
