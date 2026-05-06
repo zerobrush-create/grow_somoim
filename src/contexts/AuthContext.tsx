@@ -51,6 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
+        localStorage.setItem("grow_signup_completed", "1");
+        sessionStorage.setItem("grow_intro_seen", "1");
         setTimeout(() => {
           applyPendingReferral(newSession.user.id).catch(() => {});
         }, 0);
@@ -62,6 +64,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(existing);
       setUser(existing?.user ?? null);
       if (existing?.user) {
+        localStorage.setItem("grow_signup_completed", "1");
+        sessionStorage.setItem("grow_intro_seen", "1");
         applyPendingReferral(existing.user.id).catch(() => {});
       }
       setLoading(false);

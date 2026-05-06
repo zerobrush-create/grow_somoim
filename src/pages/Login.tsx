@@ -37,6 +37,7 @@ const Login = () => {
   const normalizedReferralCode = normalizeReferralCode(referralCode);
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const isEmbeddedBrowser = /NAVER|KAKAOTALK|FBAN|FBAV|Instagram|Line\/|Twitter|Telegram|DaumApps|; wv\)/i.test(userAgent);
+  const signupCompleted = localStorage.getItem("grow_signup_completed") === "1";
 
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
@@ -75,7 +76,7 @@ const Login = () => {
     try {
       if (mode === "signup") {
         if (!agreeTerms || !agreePrivacy) throw new Error("필수 약관에 동의해 주세요");
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -84,6 +85,11 @@ const Login = () => {
           },
         });
         if (error) throw error;
+        localStorage.setItem("grow_signup_completed", "1");
+        sessionStorage.setItem("grow_intro_seen", "1");
+        if (data.session) {
+          await supabase.auth.signOut();
+        }
         setMode("verify_email");
         startResendCooldown();
       } else {
@@ -142,6 +148,10 @@ const Login = () => {
     if (mode === "signup" && normalizedReferralCode) {
       localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
     }
+    if (mode === "signup") {
+      localStorage.setItem("grow_signup_completed", "1");
+      sessionStorage.setItem("grow_intro_seen", "1");
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
@@ -156,6 +166,10 @@ const Login = () => {
     }
     if (mode === "signup" && normalizedReferralCode) {
       localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
+    }
+    if (mode === "signup") {
+      localStorage.setItem("grow_signup_completed", "1");
+      sessionStorage.setItem("grow_intro_seen", "1");
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -313,20 +327,15 @@ const Login = () => {
           </p>
         </div>
 
-        <div className="mb-6 rounded-2xl bg-muted p-1 grid grid-cols-2 gap-1">
-          <Link
-            to="/login"
-            className={`h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-smooth ${!isSignupRoute ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"}`}
-          >
-            로그인
-          </Link>
-          <Link
-            to="/signup"
-            className={`h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-smooth ${isSignupRoute ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"}`}
-          >
-            회원가입
-          </Link>
-        </div>
+        {isSignupRoute ? (
+          <div className="mb-6 rounded-2xl bg-primary-soft px-4 py-3 text-center text-sm font-semibold text-primary">
+            1분만에 회원가입을 먼저 완료해주세요
+          </div>
+        ) : (
+          <div className="mb-6 rounded-2xl bg-muted px-4 py-3 text-center text-sm font-semibold text-muted-foreground">
+            로그인 후 메인 페이지로 이동합니다
+          </div>
+        )}
 
         {isEmbeddedBrowser && (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
@@ -476,13 +485,15 @@ const Login = () => {
                 로그인하기
               </Link>
             </p>
-          ) : (
+          ) : !signupCompleted ? (
             <p className="mb-4 text-xs text-muted-foreground">
               처음 이용하시나요?{" "}
               <Link to="/signup" className="font-semibold text-primary underline">
                 회원가입하기
               </Link>
             </p>
+          ) : (
+            <p className="mb-4 text-xs text-muted-foreground">가입한 계정으로 로그인해 주세요</p>
           )}
           <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
             둘러보기로 시작하기 →
