@@ -92,7 +92,7 @@ const Profile = () => {
   const isAdmin = roles?.some((r) => r.role === "admin");
   const isInstructor = roles?.some((r) => r.role === "instructor");
 
-  const referralLink = `${window.location.origin}/login?ref=${referralCode}&mode=signup`;
+  const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralLink).catch(() => {});

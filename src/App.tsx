@@ -109,6 +109,7 @@ const App = () => (
           <Route path="/chat" element={<Chat />} />
           <Route path="/dm/:peerId" element={<DirectMessage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Login />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/profile/edit" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

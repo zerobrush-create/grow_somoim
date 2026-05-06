@@ -10,12 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
-import { cn } from "@/lib/utils";
 
 type Mode = "login" | "signup" | "forgot" | "verify_email";
 
 const Login = () => {
-  const [mode, setMode] = useState<Mode>("login");
+  const location = useLocation();
+  const isSignupRoute = location.pathname === "/signup";
+  const [mode, setMode] = useState<Mode>(() => (isSignupRoute ? "signup" : "login"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +30,6 @@ const Login = () => {
   const [referralPromptOpen, setReferralPromptOpen] = useState(false);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
@@ -39,13 +39,17 @@ const Login = () => {
   useEffect(() => {
     const ref = searchParams.get("ref");
     const forceMode = searchParams.get("mode");
+    if ((forceMode === "signup" || ref) && !isSignupRoute) {
+      navigate(`/signup?${searchParams.toString()}`, { replace: true });
+      return;
+    }
     if (ref) {
       const normalized = normalizeReferralCode(ref);
       setReferralCode(normalized);
       setReferralPromptOpen(!!normalized);
     }
-    if (forceMode === "signup" || ref) setMode("signup");
-  }, [searchParams]);
+    setMode(isSignupRoute ? "signup" : "login");
+  }, [isSignupRoute, navigate, searchParams]);
 
   useEffect(() => {
     if (user) navigate(redirectTo, { replace: true });
@@ -168,7 +172,7 @@ const Login = () => {
               >
                 {resendCooldown > 0 ? `재발송 (${resendCooldown}s)` : "인증 메일 재발송"}
               </Button>
-              <button onClick={() => setMode("login")} className="w-full text-sm text-muted-foreground hover:text-foreground py-2">
+              <button onClick={() => navigate("/login", { replace: true })} className="w-full text-sm text-muted-foreground hover:text-foreground py-2">
                 로그인 화면으로 돌아가기
               </button>
             </div>
@@ -262,7 +266,6 @@ const Login = () => {
           <Button
             type="button"
             onClick={() => {
-              setMode("signup");
               setReferralPromptOpen(false);
             }}
             className="h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-soft hover:opacity-95"
@@ -285,19 +288,11 @@ const Login = () => {
           <p className="text-sm text-muted-foreground mt-1">GROW에서 새로운 인연을 만나보세요</p>
         </div>
 
-        <div className="flex bg-muted rounded-full p-1 mb-6">
-          {(["login", "signup"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={cn(
-                "flex-1 py-2 rounded-full text-sm font-bold transition-smooth",
-                mode === m ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"
-              )}
-            >
-              {m === "login" ? "로그인" : "회원가입"}
-            </button>
-          ))}
+        <div className="mb-6 text-center">
+          <h2 className="text-lg font-bold">{isSignupRoute ? "회원가입" : "로그인"}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isSignupRoute ? "처음 이용하는 분은 가입을 먼저 완료해 주세요" : "이미 가입한 계정으로 다시 들어오세요"}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in" key={mode}>
@@ -370,22 +365,19 @@ const Login = () => {
               >
                 비밀번호를 잊으셨나요?
               </button>
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                처음 이용하시나요? 먼저 <button type="button" onClick={() => setMode("signup")} className="font-semibold text-primary underline">회원가입</button>을 완료해 주세요.
-              </p>
             </div>
           )}
         </form>
 
-        {mode === "signup" && (
-          <>
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">또는</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground">또는</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
 
-            <div className="space-y-2.5">
+        <div className="space-y-2.5">
+          {mode === "signup" ? (
+            <>
               <p className="text-center text-[11px] text-muted-foreground">
                 소셜 계정으로 처음 시작할 수도 있어요. 가입 후에는 같은 계정으로 로그인됩니다.
               </p>
@@ -409,17 +401,32 @@ const Login = () => {
                 <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
                 카카오로 회원가입
               </button>
-            </div>
-          </>
-        )}
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={handleGoogle} className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
+                </svg>
+                Google로 로그인
+              </button>
+              <button type="button" onClick={() => handleOAuth("kakao")} className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
+                카카오로 로그인
+              </button>
+            </>
+          )}
+        </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-6 leading-relaxed">
-          가입하면{" "}
-          <Link to="/terms" className="underline hover:text-foreground">서비스 약관</Link>
-          {" "}및{" "}
-          <Link to="/privacy" className="underline hover:text-foreground">개인정보 처리방침</Link>
-          에 동의하게 됩니다.
-        </p>
+        {mode === "signup" && (
+          <p className="text-center text-[11px] text-muted-foreground mt-6 leading-relaxed">
+            가입하면{" "}
+            <Link to="/terms" className="underline hover:text-foreground">서비스 약관</Link>
+            {" "}및{" "}
+            <Link to="/privacy" className="underline hover:text-foreground">개인정보 처리방침</Link>
+            에 동의하게 됩니다.
+          </p>
+        )}
 
         <div className="mt-auto pt-6 text-center">
           <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
