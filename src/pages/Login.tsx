@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ const Login = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [referralPromptOpen, setReferralPromptOpen] = useState(false);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,9 +39,13 @@ const Login = () => {
   useEffect(() => {
     const ref = searchParams.get("ref");
     const forceMode = searchParams.get("mode");
-    if (ref) setReferralCode(normalizeReferralCode(ref));
+    if (ref) {
+      const normalized = normalizeReferralCode(ref);
+      setReferralCode(normalized);
+      setReferralPromptOpen(!!normalized);
+    }
     if (forceMode === "signup" || ref) setMode("signup");
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) navigate(redirectTo, { replace: true });
@@ -230,6 +236,40 @@ const Login = () => {
   /* ── 로그인 / 회원가입 화면 ── */
   return (
     <div className="min-h-screen bg-background">
+      <Dialog open={referralPromptOpen} onOpenChange={setReferralPromptOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-3xl">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <Gift className="h-7 w-7" />
+            </div>
+            <DialogTitle className="text-xl">추천 코드가 적용됐어요</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              친구 초대 링크로 들어왔어요. 회원가입하면 추천 코드가 자동으로 함께 전달됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-2xl bg-muted px-4 py-3 text-center">
+            <p className="text-[11px] font-semibold text-muted-foreground">추천 코드</p>
+            <p className="mt-1 font-mono text-lg font-bold tracking-widest text-primary">{referralCode}</p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              setMode("signup");
+              setReferralPromptOpen(false);
+            }}
+            className="h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-soft hover:opacity-95"
+          >
+            회원가입 시작
+          </Button>
+          <button
+            type="button"
+            onClick={() => setReferralPromptOpen(false)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            나중에 입력하기
+          </button>
+        </DialogContent>
+      </Dialog>
       <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
         <div className="flex flex-col items-center pt-6 pb-8 animate-fade-in">
           <img src={logo} alt="GROW" className="h-20 w-20 rounded-full shadow-glow" />
