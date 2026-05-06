@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Languages, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Languages, Send, Trash2, Reply } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
+import { ReplyPreview } from "@/components/chat/ReplyPreview";
+import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
 
 type Msg = { id: number; content: string; sender_id: string; created_at: string };
 
@@ -32,8 +34,15 @@ const ClassChat = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data: cls } = useQuery({
     queryKey: ["class-meta", idNum],
@@ -99,16 +108,19 @@ const ClassChat = () => {
     mutationFn: async () => {
       if (!user) throw new Error("로그인이 필요합니다");
       const content = text.trim(); if (!content) return;
-      const { error } = await supabase.from("class_messages").insert({ class_id: idNum, sender_id: user.id, content });
+      const { error } = await supabase.from("class_messages").insert({ class_id: idNum, sender_id: user.id, content: encodeReplyMessageContent(content, replyTarget) });
       if (error) throw error;
       setText("");
+      setReplyTarget(null);
     },
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
   const deleteMessage = useMutation({
     mutationFn: async (messageId: number) => {
-      const { error } = await supabase.from("class_messages").delete().eq("id", messageId);
+      const target = messages?.find((m) => m.id === messageId);
+      if (target && !canDeleteMessage(target.created_at)) throw new Error("보낸 지 5분이 지난 메시지는 삭제할 수 없어요");
+      const { error } = await supabase.from("class_messages").delete().eq("id", messageId).gt("created_at", new Date(Date.now() - 5 * 60 * 1000).toISOString());
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["class-messages", idNum] }),
@@ -117,7 +129,7 @@ const ClassChat = () => {
 
   useEffect(() => {
     if (!autoTranslate || !messages || !user) return;
-    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id !== user.id })));
+    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: parseChatMessageContent(m.content).body, isIncoming: m.sender_id !== user.id })));
   }, [autoTranslate, autoTranslateMessages, messages, user]);
 
   if (!user) { navigate("/login"); return null; }
@@ -145,24 +157,36 @@ const ClassChat = () => {
             messages && messages.length > 0 ? messages.map((m) => {
               const mine = m.sender_id === user.id;
               const s = senders?.get(m.sender_id);
+              const parsed = parseChatMessageContent(m.content);
               const translatedText = translated[m.id];
               const translationError = translationErrors[m.id];
               const isTranslating = translating.has(m.id);
+              const senderName = mine ? "나" : getSenderName(s);
+              const canDelete = mine && canDeleteMessage(m.created_at, now);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
                   {!mine && <Avatar className="h-8 w-8 mt-auto"><AvatarImage src={s?.avatar_url ?? undefined} /><AvatarFallback>{getSenderInitial(s)}</AvatarFallback></Avatar>}
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
                     {!mine && <span className="text-xs text-muted-foreground mb-0.5">{getSenderName(s)}</span>}
+                    {parsed.replyTo && <ReplyPreview reply={parsed.replyTo} mine={mine} compact />}
                     <TranslatedMessageBubble
                       mine={mine}
-                      content={m.content}
+                      content={parsed.body}
                       translatedText={translatedText}
                       translationError={translationError}
                       isTranslating={isTranslating}
-                      onTranslate={() => translate(m.id, m.content)}
+                      onTranslate={() => translate(m.id, parsed.body)}
                     />
                     <span className="text-[10px] text-muted-foreground mt-0.5">{new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
-                    {mine && (
+                    <button
+                      type="button"
+                      onClick={() => setReplyTarget({ id: m.id, senderName, body: getMessagePreview(m.content) })}
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary"
+                    >
+                      <Reply className="h-3 w-3" />
+                      답글
+                    </button>
+                    {canDelete && (
                       <button
                         type="button"
                         onClick={() => { if (window.confirm("이 메시지를 삭제할까요?")) deleteMessage.mutate(m.id); }}
@@ -179,7 +203,12 @@ const ClassChat = () => {
             }) : <div className="text-center py-16 text-sm text-muted-foreground">첫 메시지를 보내보세요</div>}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom">
+        <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="relative border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom">
+          {replyTarget && (
+            <div className="absolute bottom-[68px] left-3 right-3">
+              <ReplyPreview reply={replyTarget} onCancel={() => setReplyTarget(null)} />
+            </div>
+          )}
           <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="메시지 입력..." maxLength={1000} />
           <Button type="submit" size="icon" disabled={send.isPending || !text.trim()} aria-label="전송"><Send className="h-4 w-4" /></Button>
         </form>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2, Reply } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
+import { ReplyPreview } from "@/components/chat/ReplyPreview";
+import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
 
 type Message = {
   id: number;
@@ -36,6 +38,8 @@ const GroupChat = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
@@ -43,6 +47,11 @@ const GroupChat = () => {
   const [onlineCount, setOnlineCount] = useState(0);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTypingSentRef = useRef(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data: group } = useQuery({
     queryKey: ["group-chat-meta", id],
@@ -182,8 +191,10 @@ const GroupChat = () => {
       const { error: upErr } = await supabase.storage.from("chat-files").upload(path, file, { upsert: false });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from("chat-files").getPublicUrl(path);
-      const { error } = await supabase.from("group_messages").insert({ group_id: id, sender_id: user.id, content: `[img:${publicUrl}]` });
+      const content = encodeReplyMessageContent(`[img:${publicUrl}]`, replyTarget);
+      const { error } = await supabase.from("group_messages").insert({ group_id: id, sender_id: user.id, content });
       if (error) throw error;
+      setReplyTarget(null);
     },
     onError: (e: Error) => toast({ title: "파일 전송 실패", description: e.message, variant: "destructive" }),
   });
@@ -196,17 +207,20 @@ const GroupChat = () => {
       const { error } = await supabase.from("group_messages").insert({
         group_id: id,
         sender_id: user.id,
-        content,
+        content: encodeReplyMessageContent(content, replyTarget),
       });
       if (error) throw error;
       setText("");
+      setReplyTarget(null);
     },
     onError: (e: Error) => toast({ title: "전송 실패", description: e.message, variant: "destructive" }),
   });
 
   const deleteMessage = useMutation({
     mutationFn: async (messageId: number) => {
-      const { error } = await supabase.from("group_messages").delete().eq("id", messageId);
+      const target = messages?.find((m) => m.id === messageId);
+      if (target && !canDeleteMessage(target.created_at)) throw new Error("보낸 지 5분이 지난 메시지는 삭제할 수 없어요");
+      const { error } = await supabase.from("group_messages").delete().eq("id", messageId).gt("created_at", new Date(Date.now() - 5 * 60 * 1000).toISOString());
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["group-messages", id] }),
@@ -215,7 +229,7 @@ const GroupChat = () => {
 
   useEffect(() => {
     if (!autoTranslate || !messages || !user) return;
-    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: m.content, isIncoming: m.sender_id !== user.id })));
+    autoTranslateMessages(messages.map((m) => ({ id: m.id, content: parseChatMessageContent(m.content).body, isIncoming: m.sender_id !== user.id })));
   }, [autoTranslate, autoTranslateMessages, messages, user]);
 
   if (!user) {
@@ -269,10 +283,13 @@ const GroupChat = () => {
             messages.map((m) => {
               const mine = m.sender_id === user.id;
               const s = senders?.get(m.sender_id);
-              const isImg = m.content.startsWith("[img:");
+              const parsed = parseChatMessageContent(m.content);
+              const isImg = parsed.body.startsWith("[img:");
               const translatedText = translated[m.id];
               const translationError = translationErrors[m.id];
               const isTranslating = translating.has(m.id);
+              const senderName = mine ? "나" : getSenderName(s);
+              const canDelete = mine && canDeleteMessage(m.created_at, now);
               return (
                 <div key={m.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
                   {!mine && (
@@ -283,22 +300,31 @@ const GroupChat = () => {
                   )}
                   <div className={cn("max-w-[75%] flex flex-col", mine ? "items-end" : "items-start")}>
                     {!mine && <span className="text-xs text-muted-foreground mb-0.5">{getSenderName(s)}</span>}
+                    {parsed.replyTo && <ReplyPreview reply={parsed.replyTo} mine={mine} compact />}
                     {isImg ? (
-                      <img src={m.content.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
+                      <img src={parsed.body.slice(5, -1)} alt="첨부 이미지" className="max-w-[220px] rounded-2xl object-cover" loading="lazy" />
                     ) : (
                       <TranslatedMessageBubble
                         mine={mine}
-                        content={m.content}
+                        content={parsed.body}
                         translatedText={translatedText}
                         translationError={translationError}
                         isTranslating={isTranslating}
-                        onTranslate={() => translate(m.id, m.content)}
+                        onTranslate={() => translate(m.id, parsed.body)}
                       />
                     )}
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(m.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
-                    {mine && (
+                    <button
+                      type="button"
+                      onClick={() => setReplyTarget({ id: m.id, senderName, body: getMessagePreview(m.content) })}
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary"
+                    >
+                      <Reply className="h-3 w-3" />
+                      답글
+                    </button>
+                    {canDelete && (
                       <button
                         type="button"
                         onClick={() => { if (window.confirm("이 메시지를 삭제할까요?")) deleteMessage.mutate(m.id); }}
@@ -330,8 +356,13 @@ const GroupChat = () => {
 
         <form
           onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
-          className="border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom"
+          className="relative border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom"
         >
+          {replyTarget && (
+            <div className="absolute bottom-[68px] left-3 right-3">
+              <ReplyPreview reply={replyTarget} onCancel={() => setReplyTarget(null)} />
+            </div>
+          )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile.mutate(f); e.target.value = ""; }} />
           <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadFile.isPending} className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground" aria-label="이미지 첨부">
             <Paperclip className="h-4 w-4" />
