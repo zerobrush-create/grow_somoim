@@ -40,6 +40,17 @@ const applyPendingReferral = async (userId: string) => {
   }
 };
 
+const applyPendingSignupProfile = async (userId: string) => {
+  const pendingName = localStorage.getItem("grow_pending_signup_name")?.trim();
+  if (!pendingName) return;
+
+  await Promise.all([
+    supabase.from("profiles").update({ name: pendingName, nickname: pendingName }).eq("id", userId),
+    supabase.from("users").update({ nickname: pendingName }).eq("id", userId),
+  ]);
+  localStorage.removeItem("grow_pending_signup_name");
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("grow_signup_completed", "1");
         sessionStorage.setItem("grow_intro_seen", "1");
         setTimeout(() => {
+          applyPendingSignupProfile(newSession.user.id).catch(() => {});
           applyPendingReferral(newSession.user.id).catch(() => {});
         }, 0);
       }
@@ -66,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (existing?.user) {
         localStorage.setItem("grow_signup_completed", "1");
         sessionStorage.setItem("grow_intro_seen", "1");
+        applyPendingSignupProfile(existing.user.id).catch(() => {});
         applyPendingReferral(existing.user.id).catch(() => {});
       }
       setLoading(false);

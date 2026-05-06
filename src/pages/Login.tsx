@@ -21,6 +21,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [showEmailSignup, setShowEmailSignup] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +36,7 @@ const Login = () => {
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/";
   const normalizedReferralCode = normalizeReferralCode(referralCode);
+  const canStartSignup = name.trim().length >= 2 && agreeTerms && agreePrivacy;
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const isEmbeddedBrowser = /NAVER|KAKAOTALK|FBAN|FBAV|Instagram|Line\/|Twitter|Telegram|DaumApps|; wv\)/i.test(userAgent);
   const signupCompleted = localStorage.getItem("grow_signup_completed") === "1";
@@ -83,6 +85,7 @@ const Login = () => {
     setSubmitting(true);
     try {
       if (mode === "signup") {
+        if (name.trim().length < 2) throw new Error("닉네임을 2자 이상 입력해 주세요");
         if (!agreeTerms || !agreePrivacy) throw new Error("필수 약관에 동의해 주세요");
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -96,7 +99,8 @@ const Login = () => {
         localStorage.setItem("grow_signup_completed", "1");
         sessionStorage.setItem("grow_intro_seen", "1");
         if (data.session) {
-          await supabase.auth.signOut();
+          navigate(redirectTo, { replace: true });
+          return;
         }
         setMode("verify_email");
         startResendCooldown();
@@ -144,6 +148,10 @@ const Login = () => {
       await copyOpenBrowserLink();
       return;
     }
+    if (mode === "signup" && name.trim().length < 2) {
+      toast({ title: "닉네임을 입력해 주세요", description: "가입 전에 사용할 닉네임을 2자 이상 입력해 주세요.", variant: "destructive" });
+      return;
+    }
     if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
       toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
       return;
@@ -152,6 +160,7 @@ const Login = () => {
       localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
     }
     if (mode === "signup") {
+      localStorage.setItem("grow_pending_signup_name", name.trim());
       localStorage.setItem("grow_signup_completed", "1");
       sessionStorage.setItem("grow_intro_seen", "1");
     }
@@ -163,6 +172,10 @@ const Login = () => {
   };
 
   const handleOAuth = async (provider: "kakao") => {
+    if (mode === "signup" && name.trim().length < 2) {
+      toast({ title: "닉네임을 입력해 주세요", description: "가입 전에 사용할 닉네임을 2자 이상 입력해 주세요.", variant: "destructive" });
+      return;
+    }
     if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
       toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
       return;
@@ -171,6 +184,7 @@ const Login = () => {
       localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
     }
     if (mode === "signup") {
+      localStorage.setItem("grow_pending_signup_name", name.trim());
       localStorage.setItem("grow_signup_completed", "1");
       sessionStorage.setItem("grow_intro_seen", "1");
     }
@@ -364,14 +378,6 @@ const Login = () => {
               <Input id="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder="활동할 닉네임을 입력하세요" className="h-12 rounded-xl bg-muted border-0" />
             </div>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-semibold">이메일</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="이메일 주소" className="h-12 rounded-xl bg-muted border-0" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-semibold">비밀번호</Label>
-            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호 (6자 이상)" className="h-12 rounded-xl bg-muted border-0" />
-          </div>
 
           {mode === "signup" && (
             <>
@@ -410,13 +416,26 @@ const Login = () => {
             </>
           )}
 
-          <Button
-            type="submit"
-            disabled={submitting || (mode === "signup" && (!agreeTerms || !agreePrivacy))}
-            className="w-full h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-soft hover:opacity-95 mt-2"
-          >
-            {submitting ? "처리 중..." : mode === "login" ? "로그인" : "회원가입"}
-          </Button>
+          {(mode === "login" || showEmailSignup) && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">이메일 {mode === "signup" && "(아이디)"}</Label>
+                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="이메일 주소" className="h-12 rounded-xl bg-muted border-0" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold">비밀번호</Label>
+                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호 (6자 이상)" className="h-12 rounded-xl bg-muted border-0" />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={submitting || (mode === "signup" && !canStartSignup)}
+                className="w-full h-12 rounded-xl text-base font-bold gradient-primary border-0 shadow-soft hover:opacity-95 mt-2"
+              >
+                {submitting ? "처리 중..." : mode === "login" ? "로그인" : "이메일로 회원가입"}
+              </Button>
+            </>
+          )}
 
           {mode === "login" && (
             <div className="text-center">
@@ -441,8 +460,25 @@ const Login = () => {
           {mode === "signup" ? (
             <>
               <p className="text-center text-[11px] text-muted-foreground">
-                소셜 계정으로 처음 시작할 수도 있어요. 가입 후에는 같은 계정으로 로그인됩니다.
+                닉네임과 필수 동의 후 원하는 방식으로 시작하세요. 가능한 경우 가입 후 자동 로그인됩니다.
               </p>
+              <button
+                type="button"
+                onClick={() => handleOAuth("kakao")}
+                disabled={!canStartSignup}
+                className="w-full h-[52px] rounded-xl bg-[#FEE500] text-[#191600] font-bold text-base flex items-center justify-center gap-2 transition-smooth hover:opacity-90 disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
+                카카오로 시작하기
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEmailSignup((open) => !open)}
+                className="w-full h-12 rounded-xl bg-primary-soft text-primary font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-primary-soft/80"
+              >
+                <Mail className="h-4 w-4" />
+                {showEmailSignup ? "이메일 입력 닫기" : "이메일로 시작하기"}
+              </button>
               {isEmbeddedBrowser ? (
                 <button
                   type="button"
@@ -456,7 +492,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={handleGoogle}
-                  disabled={!agreeTerms || !agreePrivacy}
+                  disabled={!canStartSignup}
                   className="w-full h-12 rounded-xl bg-card border border-border text-foreground font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -465,15 +501,6 @@ const Login = () => {
                   Google로 회원가입
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleOAuth("kakao")}
-                disabled={!agreeTerms || !agreePrivacy}
-                className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90 disabled:opacity-50"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.84 5.21 4.6 6.6l-1.18 4.32c-.1.36.31.65.62.45L11.2 19c.27.02.53.04.8.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
-                카카오로 회원가입
-              </button>
             </>
           ) : (
             <>
