@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Mail, CheckCircle2, Gift } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle2, Gift, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,8 @@ const Login = () => {
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/";
   const normalizedReferralCode = normalizeReferralCode(referralCode);
+  const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const isEmbeddedBrowser = /NAVER|KAKAOTALK|FBAN|FBAV|Instagram|Line\/|Twitter|Telegram|DaumApps|; wv\)/i.test(userAgent);
 
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
@@ -124,6 +126,15 @@ const Login = () => {
   };
 
   const handleGoogle = async () => {
+    if (isEmbeddedBrowser) {
+      await navigator.clipboard?.writeText(window.location.href).catch(() => {});
+      toast({
+        title: "Google 로그인이 차단된 브라우저예요",
+        description: "주소를 복사했어요. Safari 또는 Chrome에서 열어 로그인해 주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
       toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
       return;
@@ -302,6 +313,27 @@ const Login = () => {
           </p>
         </div>
 
+        <div className="mb-6 rounded-2xl bg-muted p-1 grid grid-cols-2 gap-1">
+          <Link
+            to="/login"
+            className={`h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-smooth ${!isSignupRoute ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"}`}
+          >
+            로그인
+          </Link>
+          <Link
+            to="/signup"
+            className={`h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-smooth ${isSignupRoute ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"}`}
+          >
+            회원가입
+          </Link>
+        </div>
+
+        {isEmbeddedBrowser && (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
+            Google은 네이버·텔레그램 같은 앱 안 브라우저 로그인을 차단할 수 있어요. 오른쪽 메뉴에서 Safari/Chrome으로 열면 Google 로그인이 됩니다.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in" key={mode}>
           {mode === "signup" && (
             <div className="space-y-1.5">
@@ -415,6 +447,7 @@ const Login = () => {
                 <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1-3.31 0-6-2.74-6-6.2s2.69-6.2 6-6.2c1.88 0 3.14.8 3.86 1.49l2.63-2.54C16.78 3.18 14.6 2.2 12 2.2 6.92 2.2 2.8 6.32 2.8 11.4S6.92 20.6 12 20.6c6.93 0 9.2-4.86 9.2-7.36 0-.5-.05-.88-.12-1.04H12z"/>
                 </svg>
+                {isEmbeddedBrowser && <ExternalLink className="h-4 w-4" />}
                 Google로 로그인
               </button>
               <button type="button" onClick={() => handleOAuth("kakao")} className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] font-bold text-sm flex items-center justify-center gap-2 transition-smooth hover:opacity-90">
