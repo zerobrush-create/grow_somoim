@@ -35,8 +35,9 @@ type SenderProfile = {
 const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || "사용자";
 const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
 
-const GroupChat = () => {
-  const { id } = useParams();
+const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
+  const params = useParams();
+  const id = groupId ?? params.id;
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -262,8 +263,9 @@ const GroupChat = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="mx-auto max-w-md w-full flex flex-col flex-1">
+    <div className={cn("bg-background flex flex-col", embedded ? "h-[70vh] min-h-[520px] rounded-2xl border border-border overflow-hidden" : "min-h-screen")}>
+      <div className={cn("w-full flex flex-col flex-1", embedded ? "" : "mx-auto max-w-md")}>
+        {!embedded && (
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
@@ -303,6 +305,31 @@ const GroupChat = () => {
             <Video className="h-5 w-5" />
           </a>
         </header>
+        )}
+
+        {embedded && (
+          <div className="border-b border-border px-3 py-2 flex items-center gap-2 bg-card/80">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate">{group?.name ?? "모임 채팅"}</p>
+              <p className="text-[11px] text-muted-foreground">채팅 내용이 실시간으로 표시됩니다</p>
+            </div>
+            <button
+              onClick={() => setMembersOpen(true)}
+              className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+              aria-label="멤버 보기"
+            >
+              <Users className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setAutoTranslate(!autoTranslate)}
+              className={cn("h-9 w-9 rounded-full flex items-center justify-center transition-smooth relative", autoTranslate ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground hover:text-foreground")}
+              aria-label="자동번역 토글"
+            >
+              <Languages className="h-4 w-4" />
+              {autoTranslate && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />}
+            </button>
+          </div>
+        )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           {isLoading ? (

@@ -1,23 +1,22 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Bell, Settings, UserCheck, Calendar, Star } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useGroup } from "@/hooks/useGroups";
-import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
+import GroupBoard from "./GroupBoard";
+import GroupChat from "./GroupChat";
 
-type Tab = "intro" | "members" | "chat" | "events" | "board" | "photos" | "notices" | "reviews";
+type Tab = "intro" | "board" | "photos" | "chat";
 
 const GroupDetail = () => {
   const { id } = useParams();
@@ -27,19 +26,12 @@ const GroupDetail = () => {
   const { t } = useLanguage();
   const { data: group, isLoading } = useGroup(id);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
-  const [reviewText, setReviewText] = useState("");
-  const [rating, setRating] = useState(5);
-  const { data: members = [], isLoading: membersLoading } = useGroupMembers(id);
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "intro", label: t.groupDetail.tabIntro },
-    { id: "members", label: t.groupDetail.tabMembers },
-    { id: "chat", label: t.groupDetail.tabChat },
-    { id: "events", label: t.groupDetail.tabEvents },
+    { id: "intro", label: "홈" },
     { id: "board", label: t.groupDetail.tabBoard },
     { id: "photos", label: t.groupDetail.tabPhotos },
-    { id: "notices", label: t.groupDetail.tabNotices },
-    { id: "reviews", label: t.groupDetail.tabReviews },
+    { id: "chat", label: t.groupDetail.tabChat },
   ];
 
   const { data: myMembership } = useQuery({
@@ -75,24 +67,6 @@ const GroupDetail = () => {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmark-group", id, user?.id] }),
-  });
-
-  const { data: reviews } = useQuery({
-    queryKey: ["group-reviews", id],
-    enabled: !!id,
-    queryFn: async () => (await supabase.from("group_reviews").select("*").eq("group_id", id!).order("created_at", { ascending: false })).data ?? [],
-  });
-
-  const addReview = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error(t.groupDetail.loginRequired);
-      if (!reviewText.trim()) throw new Error(t.groupDetail.reviewPlaceholder);
-      const { error } = await supabase.from("group_reviews").insert({ group_id: id!, author_id: user.id, rating, content: reviewText.trim() });
-      if (error) throw error;
-      setReviewText("");
-    },
-    onSuccess: () => { toast({ title: t.groupDetail.reviewSuccess }); qc.invalidateQueries({ queryKey: ["group-reviews", id] }); },
-    onError: (e: Error) => toast({ title: t.groupDetail.reviewFail, description: e.message, variant: "destructive" }),
   });
 
   const join = useMutation({
@@ -221,7 +195,7 @@ const GroupDetail = () => {
               >
                 <Heart className={cn("h-5 w-5", liked && "fill-accent text-accent")} />
               </button>
-              <button className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="share">
+              <button onClick={shareInvite} className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="share">
                 <Share2 className="h-5 w-5" />
               </button>
             </div>
@@ -281,76 +255,9 @@ const GroupDetail = () => {
               </p>
             </section>
           )}
-          {activeTab === "members" && (
-            <section className="px-4 pt-5 space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-bold">{t.groupDetail.memberList}</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">{t.groupDetail.inviteDesc}</p>
-                  </div>
-                  <Button size="sm" onClick={shareInvite} className="rounded-xl">
-                    <Share2 className="mr-1.5 h-4 w-4" />
-                    {t.groupDetail.inviteMembers}
-                  </Button>
-                </div>
-              </div>
-
-              {membersLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-14 rounded-2xl" />
-                  <Skeleton className="h-14 rounded-2xl" />
-                </div>
-              ) : members.length > 0 ? (
-                <div className="space-y-2">
-                  {members.map((member) => {
-                    const isGroupOwner = member.userId === group.owner_id;
-                    return (
-                      <div key={member.userId} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                        <Avatar className="h-11 w-11">
-                          <AvatarImage src={member.avatarUrl ?? undefined} />
-                          <AvatarFallback>{member.name.trim().slice(0, 1).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">{member.name}</p>
-                          {member.email && <p className="truncate text-xs text-muted-foreground">{member.email}</p>}
-                        </div>
-                        <Badge variant={isGroupOwner ? "default" : "secondary"} className="shrink-0">
-                          {isGroupOwner ? t.groupDetail.ownerRole : t.groupDetail.memberRole}
-                        </Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-sm text-muted-foreground">{t.groupDetail.noMembers}</div>
-              )}
-            </section>
-          )}
-          {activeTab === "chat" && (
-            <div className="px-4 py-6 text-center">
-              <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.chatDesc}</p>
-              <Button
-                variant="outline"
-                onClick={() => navigate((isMember || isOwner) ? `/groups/${group.id}/chat` : "/chat")}
-              >
-                {t.groupDetail.goToChat}
-              </Button>
-            </div>
-          )}
-          {activeTab === "events" && (
-            <div className="px-4 py-6 text-center">
-              <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.eventsDesc}</p>
-              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>{t.groupDetail.viewEvents}</Button>
-            </div>
-          )}
           {activeTab === "board" && (
-            <div className="px-4 py-6 text-center">
-              <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.boardDesc}</p>
-              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/board`)}>{t.groupDetail.goToBoard}</Button>
+            <div className="px-4 py-4">
+              <GroupBoard embedded groupId={group.id} />
             </div>
           )}
           {activeTab === "photos" && (
@@ -360,40 +267,18 @@ const GroupDetail = () => {
               <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/photos`)}>{t.groupDetail.goToPhotos}</Button>
             </div>
           )}
-          {activeTab === "notices" && (
-            <div className="px-4 py-6 text-center">
-              <Bell className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.noticesDesc}</p>
-              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/announcements`)}>{t.groupDetail.viewNotices}</Button>
-            </div>
-          )}
-          {activeTab === "reviews" && (
-            <div className="px-4 py-5 space-y-4">
-              {user && (isMember || isOwner) && (
-                <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center gap-1">
-                    {[1,2,3,4,5].map((s) => (
-                      <button key={s} onClick={() => setRating(s)} aria-label={`${s}`}>
-                        <Star className={cn("h-5 w-5", s <= rating ? "fill-accent text-accent" : "text-muted")} />
-                      </button>
-                    ))}
-                  </div>
-                  <Textarea rows={3} placeholder={t.groupDetail.reviewPlaceholder} value={reviewText} onChange={(e) => setReviewText(e.target.value)} maxLength={1000} />
-                  <Button onClick={() => addReview.mutate()} disabled={addReview.isPending} className="w-full">
-                    {addReview.isPending ? t.groupDetail.submitting : t.groupDetail.submitReview}
+          {activeTab === "chat" && (
+            <div className="px-4 py-4">
+              {(isMember || isOwner) ? (
+                <GroupChat embedded groupId={group.id} />
+              ) : (
+                <div className="rounded-2xl border border-border bg-card p-6 text-center">
+                  <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.chatDesc}</p>
+                  <Button onClick={handleJoin} disabled={join.isPending || !!myMembership}>
+                    {join.isPending ? t.groupDetail.applying : ctaLabel}
                   </Button>
                 </div>
-              )}
-              {reviews && reviews.length > 0 ? reviews.map((r) => (
-                <div key={r.id} className="border-b border-border pb-3">
-                  <div className="flex items-center gap-1 mb-1">
-                    {[1,2,3,4,5].map((s) => <Star key={s} className={cn("h-3.5 w-3.5", s <= r.rating ? "fill-accent text-accent" : "text-muted")} />)}
-                  </div>
-                  <p className="text-sm">{r.content}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
-                </div>
-              )) : (
-                <div className="text-center py-12 text-sm text-muted-foreground">{t.groupDetail.noReviews}</div>
               )}
             </div>
           )}
@@ -402,28 +287,11 @@ const GroupDetail = () => {
 
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
         <div className="flex items-center gap-2 p-3">
-          {(isMember || isOwner) ? (
-            <Link
-              to={`/groups/${group.id}/chat`}
-              className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-foreground hover:bg-secondary transition-smooth"
-              aria-label="chat"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Link>
-          ) : (
-            <Link
-              to="/chat"
-              className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-foreground hover:bg-secondary transition-smooth"
-              aria-label="chat"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Link>
-          )}
           <Button
             onClick={handleJoin}
             disabled={join.isPending || !!myMembership || isOwner}
             className={cn(
-              "flex-1 h-12 rounded-xl text-base font-bold border-0 hover:opacity-95",
+              "w-full h-12 rounded-xl text-base font-bold border-0 hover:opacity-95",
               (myMembership || isOwner) ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
             )}
           >

@@ -16,6 +16,8 @@ import { MentionInput } from "@/components/MentionInput";
 import { ImageUploader } from "@/components/ImageUploader";
 import { HashtagText } from "@/components/HashtagText";
 
+type BoardFilter = "all" | "notice" | "review" | "greeting" | "free";
+
 type Post = {
   id: number;
   title: string;
@@ -25,11 +27,29 @@ type Post = {
   created_at: string;
 };
 
-const GroupBoard = () => {
-  const { id } = useParams();
+const BOARD_FILTERS: { id: BoardFilter; label: string }[] = [
+  { id: "all", label: "전체" },
+  { id: "notice", label: "공지" },
+  { id: "review", label: "모임후기" },
+  { id: "greeting", label: "가입인사" },
+  { id: "free", label: "자유" },
+];
+
+const getPostFilter = (post: Post): Exclude<BoardFilter, "all"> => {
+  const text = `${post.title} ${post.content}`.toLowerCase();
+  if (post.is_pinned || /공지|필독|notice/.test(text)) return "notice";
+  if (/모임후기|후기|리뷰|review/.test(text)) return "review";
+  if (/가입인사|가입 인사|안녕하세요|반갑/.test(text)) return "greeting";
+  return "free";
+};
+
+const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
+  const params = useParams();
+  const id = groupId ?? params.id;
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const [filter, setFilter] = useState<BoardFilter>("all");
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -49,6 +69,8 @@ const GroupBoard = () => {
   });
 
   const isMember = membership?.status === "approved" || group?.owner_id === user?.id;
+  const rootClassName = embedded ? "bg-background" : "min-h-screen bg-background";
+  const shellClassName = embedded ? "w-full pb-5" : "mx-auto max-w-md pb-24";
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ["board-posts", id],
@@ -96,27 +118,50 @@ const GroupBoard = () => {
     onError: (e: Error) => toast({ title: "등록 실패", description: e.message, variant: "destructive" }),
   });
 
+  const visiblePosts = (posts ?? []).filter((post) => filter === "all" || getPostFilter(post) === filter);
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-md pb-24">
+    <div className={rootClassName}>
+      <div className={shellClassName}>
+        {!embedded && (
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-base font-bold flex-1 truncate">{group?.name ?? "게시판"}</h1>
         </header>
+        )}
+
+        <div className={cn("flex gap-2 overflow-x-auto scrollbar-hide", embedded ? "px-0 pb-3" : "px-4 py-3")}>
+          {BOARD_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setFilter(item.id)}
+              className={cn(
+                "flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-smooth",
+                filter === item.id ? "bg-foreground text-background" : "bg-muted text-foreground hover:bg-secondary"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
 
         <div className="divide-y divide-border">
           {isLoading ? (
             <div className="p-4 space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>
-          ) : posts && posts.length > 0 ? (
-            posts.map((p) => {
+          ) : visiblePosts.length > 0 ? (
+            visiblePosts.map((p) => {
               const a = authors?.get(p.author_id);
+              const postFilter = getPostFilter(p);
+              const filterLabel = BOARD_FILTERS.find((item) => item.id === postFilter)?.label;
               return (
                 <button key={p.id} onClick={() => setOpenPostId(p.id)} className="w-full text-left px-4 py-4 hover:bg-muted/40 transition-smooth">
                   <div className="flex items-center gap-2 mb-1.5">
                     {p.is_pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
                     <span className="text-sm font-bold flex-1 truncate">{p.title}</span>
+                    {filterLabel && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{filterLabel}</span>}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{p.content}</p>
                   <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
@@ -136,7 +181,7 @@ const GroupBoard = () => {
         {isMember && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="fixed bottom-6 right-1/2 translate-x-[180px] h-14 w-14 rounded-full gradient-primary shadow-glow z-40" aria-label="글쓰기">
+              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "fixed bottom-24 right-6" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label="글쓰기">
                 <Plus className="h-6 w-6" />
               </Button>
             </DialogTrigger>
