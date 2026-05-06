@@ -34,6 +34,7 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/";
+  const normalizedReferralCode = normalizeReferralCode(referralCode);
 
   // 추천 링크로 진입 시 자동 처리
   useEffect(() => {
@@ -127,6 +128,9 @@ const Login = () => {
       toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
       return;
     }
+    if (mode === "signup" && normalizedReferralCode) {
+      localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
@@ -138,6 +142,9 @@ const Login = () => {
     if (mode === "signup" && (!agreeTerms || !agreePrivacy)) {
       toast({ title: "약관 동의가 필요해요", description: "회원가입 전에 필수 약관에 동의해 주세요.", variant: "destructive" });
       return;
+    }
+    if (mode === "signup" && normalizedReferralCode) {
+      localStorage.setItem("grow_pending_referral_code", normalizedReferralCode);
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -429,6 +436,21 @@ const Login = () => {
         )}
 
         <div className="mt-auto pt-6 text-center">
+          {isSignupRoute ? (
+            <p className="mb-4 text-xs text-muted-foreground">
+              이미 가입하셨나요?{" "}
+              <Link to="/login" className="font-semibold text-primary underline">
+                로그인하기
+              </Link>
+            </p>
+          ) : (
+            <p className="mb-4 text-xs text-muted-foreground">
+              처음 이용하시나요?{" "}
+              <Link to="/signup" className="font-semibold text-primary underline">
+                회원가입하기
+              </Link>
+            </p>
+          )}
           <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
             둘러보기로 시작하기 →
           </Link>
