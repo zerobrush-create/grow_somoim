@@ -133,12 +133,7 @@ const Login = () => {
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        queryParams: {
-          prompt: "select_account",
-        },
-      },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) toast({ title: mode === "signup" ? "Google 회원가입 실패" : "Google 로그인 실패", description: error.message, variant: "destructive" });
   };
@@ -429,10 +424,6 @@ const Login = () => {
             </>
           )}
         </div>
-
-        <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
-          Telegram 안에서 Google 패스키 오류가 나면 Google 화면의 <span className="font-semibold text-foreground">다른 방법 시도</span>를 누르거나 Safari에서 열어주세요.
-        </p>
 
         {mode === "signup" && (
           <p className="text-center text-[11px] text-muted-foreground mt-6 leading-relaxed">
