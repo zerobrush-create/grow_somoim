@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Search, Users, MessageCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
@@ -11,10 +11,16 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 type ChatTab = "group" | "dm";
+type ChatGroup = {
+  id: string;
+  name: string;
+  image_url: string | null;
+};
 
 const Chat = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [chatTab, setChatTab] = useState<ChatTab>("group");
   const { t } = useLanguage();
 
@@ -34,12 +40,21 @@ const Chat = () => {
     queryKey: ["chat-groups", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: mem } = await supabase
-        .from("memberships").select("group_id").eq("user_id", user!.id).eq("status", "approved");
-      const ids = (mem ?? []).map((m) => m.group_id);
+      const { data: mem, error: memError } = await supabase
+        .from("memberships")
+        .select("group_id")
+        .eq("user_id", user!.id)
+        .eq("status", "approved")
+        .order("joined_at", { ascending: false });
+      if (memError) throw memError;
+
+      const ids = Array.from(new Set((mem ?? []).map((m) => m.group_id).filter(Boolean)));
       if (ids.length === 0) return [];
-      const { data } = await supabase.from("groups").select("id,name,image_url").in("id", ids);
-      return data ?? [];
+      const { data, error } = await supabase.from("groups").select("id,name,image_url").in("id", ids);
+      if (error) throw error;
+
+      const groupMap = new Map((data ?? []).map((g) => [g.id, g]));
+      return ids.map((id) => groupMap.get(id)).filter((g): g is ChatGroup => !!g);
     },
   });
 
@@ -119,7 +134,12 @@ const Chat = () => {
             <div className="p-4 space-y-3"><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
           ) : groups && groups.length > 0 ? (
             groups.map((g) => (
-              <Link key={g.id} to={`/groups/${g.id}/chat`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-smooth">
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => navigate(`/groups/${encodeURIComponent(g.id)}/chat`)}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/50 transition-smooth"
+              >
                 <div className="h-12 w-12 rounded-full bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
                   {g.image_url ? <img src={g.image_url} alt={g.name} className="h-full w-full object-cover" /> : <Users className="h-5 w-5 text-muted-foreground" />}
                 </div>
@@ -127,7 +147,7 @@ const Chat = () => {
                   <p className="text-sm font-bold truncate">{g.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{t.chat.tapToStart}</p>
                 </div>
-              </Link>
+              </button>
             ))
           ) : (
             <div className="text-center py-20 text-sm text-muted-foreground">
