@@ -366,7 +366,7 @@ const Login = () => {
           </button>
         </DialogContent>
       </Dialog>
-      <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
+      <div className={`mx-auto max-w-md min-h-screen flex flex-col px-6 pb-8 ${isEmbeddedBrowser ? "pt-28" : "pt-10"}`}>
         <div className="flex justify-end pb-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -17,11 +17,11 @@ const Index = () => {
   useEffect(() => {
     if (loading || user) return;
 
-    const signupCompleted = localStorage.getItem("grow_signup_completed") === "1";
     const introSeen = sessionStorage.getItem("grow_intro_seen") === "1";
+    const signupPath = `/signup${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
     if (introSeen) {
-      navigate(signupCompleted ? "/login" : `/signup${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+      navigate(signupPath, { replace: true });
       return;
     }
 
@@ -29,7 +29,7 @@ const Index = () => {
     sessionStorage.setItem("grow_intro_seen", "1");
     const timer = window.setTimeout(() => {
       setShowIntro(false);
-      navigate(signupCompleted ? "/login" : `/signup${searchParams.toString() ? `?${searchParams.toString()}` : ""}`, { replace: true });
+      navigate(signupPath, { replace: true });
     }, INTRO_DURATION_MS);
 
     return () => window.clearTimeout(timer);
