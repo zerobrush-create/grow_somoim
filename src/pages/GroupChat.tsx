@@ -264,7 +264,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
 
   return (
     <div className={cn("bg-background flex flex-col", embedded ? "h-[70vh] min-h-[520px] rounded-2xl border border-border overflow-hidden" : "min-h-screen")}>
-      <div className={cn("w-full flex flex-col flex-1", embedded ? "" : "mx-auto max-w-md")}>
+      <div className={cn("w-full flex flex-col flex-1 min-h-0", embedded ? "" : "mx-auto max-w-md")}>
         {!embedded && (
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
@@ -331,7 +331,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
           </div>
         )}
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
           {isLoading ? (
             <>
               <Skeleton className="h-12 w-2/3" />
@@ -414,7 +414,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
 
         <form
           onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
-          className="relative border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom"
+          className="relative flex-shrink-0 border-t border-border bg-card/95 backdrop-blur-md p-3 flex gap-2 safe-bottom"
         >
           {replyTarget && (
             <div className="absolute bottom-[68px] left-3 right-3">
