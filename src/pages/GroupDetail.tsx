@@ -152,10 +152,11 @@ const GroupDetail = () => {
 
   const isOwner = !!user && group.owner_id === user.id;
   const isMember = myMembership?.status === "approved";
+  const showJoinBar = !isOwner && !isMember;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-md bg-background relative pb-28">
+      <div className={cn("mx-auto max-w-md bg-background relative", showJoinBar ? "pb-28" : "pb-8")}>
         <div className="relative aspect-[4/3] bg-muted overflow-hidden flex items-center justify-center">
           {group.image_url ? (
             <img src={group.image_url} alt={group.name} className="h-full w-full object-cover" />
@@ -302,20 +303,22 @@ const GroupDetail = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
-        <div className="flex items-center gap-2 p-3">
-          <Button
-            onClick={handleJoin}
-            disabled={join.isPending || !!myMembership || isOwner}
-            className={cn(
-              "w-full h-12 rounded-xl text-base font-bold border-0 hover:opacity-95",
-              (myMembership || isOwner) ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
-            )}
-          >
-            {join.isPending ? t.groupDetail.applying : isOwner ? t.groupDetail.myGroup : ctaLabel}
-          </Button>
+      {showJoinBar && (
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
+          <div className="flex items-center gap-2 p-3">
+            <Button
+              onClick={handleJoin}
+              disabled={join.isPending || !!myMembership}
+              className={cn(
+                "w-full h-12 rounded-xl text-base font-bold border-0 hover:opacity-95",
+                myMembership ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
+              )}
+            >
+              {join.isPending ? t.groupDetail.applying : ctaLabel}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
