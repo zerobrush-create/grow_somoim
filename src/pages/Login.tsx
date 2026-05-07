@@ -8,7 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { LANGUAGE_LABELS, useLanguage } from "@/contexts/LanguageContext";
+import type { Language } from "@/i18n/translations";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 
@@ -33,9 +34,10 @@ const Login = () => {
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const a = t.auth;
   const [searchParams] = useSearchParams();
+  const languageOptions = Object.entries(LANGUAGE_LABELS) as [Language, (typeof LANGUAGE_LABELS)[Language]][];
   const normalizeReferralCode = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/";
   const normalizedReferralCode = normalizeReferralCode(referralCode);
@@ -332,6 +334,25 @@ const Login = () => {
         </DialogContent>
       </Dialog>
       <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
+        <div className="flex justify-center gap-2 pb-4" aria-label={t.profile.language}>
+          {languageOptions.map(([code, option]) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLang(code)}
+              aria-label={option.label}
+              aria-pressed={lang === code}
+              title={option.label}
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition-smooth ${
+                lang === code
+                  ? "bg-primary text-primary-foreground shadow-soft ring-2 ring-primary/20"
+                  : "bg-muted hover:bg-muted/80"
+              }`}
+            >
+              <span aria-hidden="true">{option.flag}</span>
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col items-center pt-6 pb-8 animate-fade-in">
           <img src={logo} alt="GROW" className="h-20 w-20 rounded-full shadow-glow" />
           <h1 className="text-2xl font-bold mt-4">{a.title}</h1>
