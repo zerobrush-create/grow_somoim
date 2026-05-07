@@ -217,7 +217,7 @@ const Login = () => {
   /* ── 이메일 인증 대기 화면 ── */
   if (mode === "verify_email") {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" data-i18n-skip>
         <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
           <button onClick={() => setMode("signup")} className="self-start p-1 -ml-1 text-muted-foreground mb-8">
             <ArrowLeft className="h-5 w-5" />
@@ -256,7 +256,7 @@ const Login = () => {
   /* ── 비밀번호 찾기 화면 ── */
   if (mode === "forgot") {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" data-i18n-skip>
         <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
           <button
             onClick={() => { setMode("login"); setForgotSent(false); setForgotEmail(""); }}
@@ -316,7 +316,7 @@ const Login = () => {
   /* ── 로그인 / 회원가입 화면 ── */
   if (showSignupIntro) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="min-h-screen bg-background flex items-center justify-center px-6" data-i18n-skip>
         <div className="flex flex-col items-center gap-5 text-center animate-fade-in">
           <img src={logo} alt="GROW" className="h-28 w-28 rounded-full shadow-glow animate-scale-in" />
           <div>
@@ -332,7 +332,7 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-i18n-skip>
       <Dialog open={referralPromptOpen} onOpenChange={setReferralPromptOpen}>
         <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-3xl">
           <DialogHeader className="text-center">
