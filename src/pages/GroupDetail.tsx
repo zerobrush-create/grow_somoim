@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, CalendarDays, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +16,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
 
-type Tab = "intro" | "board" | "photos" | "chat";
+type Tab = "intro" | "board" | "photos" | "meetups" | "flash" | "chat";
 
 const GroupDetail = () => {
   const { id } = useParams();
@@ -27,11 +27,13 @@ const GroupDetail = () => {
   const { data: group, isLoading } = useGroup(id);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "intro", label: "홈" },
-    { id: "board", label: t.groupDetail.tabBoard },
-    { id: "photos", label: t.groupDetail.tabPhotos },
-    { id: "chat", label: t.groupDetail.tabChat },
+  const tabs: { id: Tab; emoji: string; label: string }[] = [
+    { id: "intro", emoji: "🏠", label: t.groupDetail.tabIntro },
+    { id: "board", emoji: "📝", label: t.groupDetail.tabBoard },
+    { id: "photos", emoji: "📸", label: t.groupDetail.tabPhotos },
+    { id: "meetups", emoji: "📅", label: t.groupDetail.tabEvents },
+    { id: "flash", emoji: "⚡", label: t.groupDetail.tabFlash },
+    { id: "chat", emoji: "💬", label: t.groupDetail.tabChat },
   ];
 
   const { data: myMembership } = useQuery({
@@ -241,6 +243,7 @@ const GroupDetail = () => {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
+              <span className="mr-1" aria-hidden="true">{tab.emoji}</span>
               {tab.label}
             </button>
           ))}
@@ -265,6 +268,20 @@ const GroupDetail = () => {
               <Image className="h-10 w-10 mx-auto mb-2 opacity-30 text-muted-foreground" />
               <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.photosDesc}</p>
               <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/photos`)}>{t.groupDetail.goToPhotos}</Button>
+            </div>
+          )}
+          {activeTab === "meetups" && (
+            <div className="px-4 py-6 text-center">
+              <CalendarDays className="h-10 w-10 mx-auto mb-2 opacity-40 text-primary" />
+              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.eventsDesc}</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>{t.groupDetail.viewEvents}</Button>
+            </div>
+          )}
+          {activeTab === "flash" && (
+            <div className="px-4 py-6 text-center">
+              <Zap className="h-10 w-10 mx-auto mb-2 opacity-40 text-accent" />
+              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.flashDesc}</p>
+              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>{t.groupDetail.viewFlash}</Button>
             </div>
           )}
           {activeTab === "chat" && (
