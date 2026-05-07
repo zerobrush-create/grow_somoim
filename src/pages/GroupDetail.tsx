@@ -32,10 +32,10 @@ const GroupDetail = () => {
   const tabs: { id: Tab; emoji: string; label: string }[] = [
     { id: "intro", emoji: "🏠", label: t.groupDetail.tabIntro },
     { id: "board", emoji: "📝", label: t.groupDetail.tabBoard },
-    { id: "photos", emoji: "📸", label: t.groupDetail.tabPhotos },
+    { id: "chat", emoji: "💬", label: t.groupDetail.tabChat },
     { id: "meetups", emoji: "📅", label: t.groupDetail.tabEvents },
     { id: "flash", emoji: "⚡", label: t.groupDetail.tabFlash },
-    { id: "chat", emoji: "💬", label: t.groupDetail.tabChat },
+    { id: "photos", emoji: "📸", label: t.groupDetail.tabPhotos },
   ];
 
   const { data: myMembership } = useQuery({
