@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Mail, CheckCircle2, Gift, ExternalLink } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle2, Gift, ExternalLink, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LANGUAGE_LABELS, useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 
 type Mode = "login" | "signup" | "forgot" | "verify_email";
+const INTRO_DURATION_MS = 3000;
 
 const Login = () => {
   const location = useLocation();
@@ -29,6 +31,13 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+  const [showSignupIntro, setShowSignupIntro] = useState(() => {
+    try {
+      return isSignupRoute && sessionStorage.getItem("grow_intro_seen") !== "1";
+    } catch {
+      return isSignupRoute;
+    }
+  });
   const [resendCooldown, setResendCooldown] = useState(0);
   const [referralPromptOpen, setReferralPromptOpen] = useState(false);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,6 +82,13 @@ const Login = () => {
   useEffect(() => {
     if (user) navigate(redirectTo, { replace: true });
   }, [user, navigate, redirectTo]);
+
+  useEffect(() => {
+    if (!showSignupIntro) return;
+    try { sessionStorage.setItem("grow_intro_seen", "1"); } catch {}
+    const timer = window.setTimeout(() => setShowSignupIntro(false), INTRO_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [showSignupIntro]);
 
   const startResendCooldown = () => {
     setResendCooldown(60);
@@ -298,6 +314,23 @@ const Login = () => {
   }
 
   /* ── 로그인 / 회원가입 화면 ── */
+  if (showSignupIntro) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="flex flex-col items-center gap-5 text-center animate-fade-in">
+          <img src={logo} alt="GROW" className="h-28 w-28 rounded-full shadow-glow animate-scale-in" />
+          <div>
+            <p className="text-3xl font-black tracking-normal">GROW</p>
+            <p className="mt-2 text-base text-muted-foreground">{t.home.introTagline}</p>
+          </div>
+          <div className="mt-4 h-1 w-40 overflow-hidden rounded-full bg-muted">
+            <div className="h-full w-full origin-left bg-primary animate-[grow-intro-progress_3s_linear_forwards]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Dialog open={referralPromptOpen} onOpenChange={setReferralPromptOpen}>
@@ -334,24 +367,32 @@ const Login = () => {
         </DialogContent>
       </Dialog>
       <div className="mx-auto max-w-md min-h-screen flex flex-col px-6 pt-10 pb-8">
-        <div className="flex justify-center gap-2 pb-4" aria-label={t.profile.language}>
-          {languageOptions.map(([code, option]) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => setLang(code)}
-              aria-label={option.label}
-              aria-pressed={lang === code}
-              title={option.label}
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition-smooth ${
-                lang === code
-                  ? "bg-primary text-primary-foreground shadow-soft ring-2 ring-primary/20"
-                  : "bg-muted hover:bg-muted/80"
-              }`}
-            >
-              <span aria-hidden="true">{option.flag}</span>
-            </button>
-          ))}
+        <div className="flex justify-end pb-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t.profile.language}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-muted px-3 text-sm font-semibold transition-smooth hover:bg-muted/80"
+              >
+                <span className="text-xl" aria-hidden="true">{LANGUAGE_LABELS[lang].flag}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40 rounded-xl">
+              {languageOptions.map(([code, option]) => (
+                <DropdownMenuItem
+                  key={code}
+                  onClick={() => setLang(code)}
+                  className="gap-2 rounded-lg"
+                >
+                  <span className="text-lg" aria-hidden="true">{option.flag}</span>
+                  <span>{option.label}</span>
+                  {lang === code && <span className="ml-auto text-primary">✓</span>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex flex-col items-center pt-6 pb-8 animate-fade-in">
           <img src={logo} alt="GROW" className="h-20 w-20 rounded-full shadow-glow" />
@@ -424,14 +465,14 @@ const Login = () => {
                   <Checkbox checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(v === true)} className="mt-0.5" />
                   <span>
                     <span className="text-destructive">{a.termsRequiredLabel}</span>{" "}
-                    <Link to="/terms" className="underline hover:text-foreground">{a.terms}</Link> {a.agreeTerms.replace(a.terms, "").trim()}
+                    {a.agreePrefix}<Link to="/terms" className="underline hover:text-foreground">{a.terms}</Link>{a.agreeSuffix}
                   </span>
                 </label>
                 <label className="flex items-start gap-2 text-xs">
                   <Checkbox checked={agreePrivacy} onCheckedChange={(v) => setAgreePrivacy(v === true)} className="mt-0.5" />
                   <span>
                     <span className="text-destructive">{a.termsRequiredLabel}</span>{" "}
-                    <Link to="/privacy" className="underline hover:text-foreground">{a.privacy}</Link> {a.agreePrivacy.replace(a.privacy, "").trim()}
+                    {a.agreePrefix}<Link to="/privacy" className="underline hover:text-foreground">{a.privacy}</Link>{a.agreeSuffix}
                   </span>
                 </label>
               </div>
