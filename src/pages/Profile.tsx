@@ -20,7 +20,7 @@ import { displayText as translateDisplayText } from "@/i18n/format";
 const Profile = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const unread = useUnreadNotifications();
   const { resolvedTheme, setTheme } = useTheme();
@@ -96,10 +96,16 @@ const Profile = () => {
 
   const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
 
-  const copyCode = () => {
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(referralCode).catch(() => {});
+    setCopied("code");
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const copyReferralLink = () => {
     navigator.clipboard.writeText(referralLink).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied("link");
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const deleteAccount = async () => {
@@ -224,15 +230,36 @@ const Profile = () => {
         <div className="bg-card rounded-2xl p-4 shadow-soft border border-border">
           <div className="flex items-center gap-2 mb-3"><Gift className="h-4 w-4 text-accent" /><h3 className="text-sm font-bold">{t.profile.inviteFriends}</h3></div>
           <p className="text-xs text-muted-foreground mb-3">{t.profile.inviteDesc}</p>
-          <div className="bg-muted rounded-xl px-3 py-2.5 mb-2">
-            <p className="text-[10px] text-muted-foreground mb-1">{t.profile.myCode}</p>
-            <p className="font-mono text-base font-bold tracking-widest text-primary">{referralCode}</p>
+          <div className="bg-muted rounded-xl px-3 py-2.5 mb-2 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-muted-foreground mb-1">{t.profile.myCode}</p>
+              <p className="font-mono text-base font-bold tracking-widest text-primary truncate">{referralCode}</p>
+            </div>
+            <button
+              onClick={copyReferralCode}
+              className="h-9 px-3 rounded-lg bg-background text-primary text-[11px] font-bold flex items-center gap-1.5 transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0"
+              aria-label={t.profile.copyCode}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {t.profile.copyCode}
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-muted/60 rounded-xl px-3 py-2 text-[11px] text-muted-foreground truncate">{referralLink}</div>
-            <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0" aria-label={t.profile.copyReferral}><Copy className="h-4 w-4" /></button>
+            <button
+              onClick={copyReferralLink}
+              className="h-10 px-3 rounded-xl bg-primary-soft text-primary flex items-center gap-1.5 transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0"
+              aria-label={t.profile.copyLink}
+            >
+              <Copy className="h-4 w-4" />
+              <span className="text-[11px] font-bold hidden min-[380px]:inline">{t.profile.copyLink}</span>
+            </button>
           </div>
-          {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">{t.profile.linkCopied}</p>}
+          {copied && (
+            <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">
+              {copied === "code" ? t.profile.codeCopied : t.profile.linkCopied}
+            </p>
+          )}
         </div>
       </section>
 
