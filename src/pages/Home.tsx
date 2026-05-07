@@ -19,6 +19,17 @@ type HomeGroup = {
   description?: string | null;
   owner_id?: string | null;
   created_at?: string | null;
+  is_private?: boolean | null;
+};
+
+const RECENT_ACTIVITY_DAYS = 7;
+
+const normalizeText = (value?: string | null) => (value ?? "").trim().toLowerCase();
+
+const matchesLocation = (groupLocation?: string | null, profileLocation?: string | null) => {
+  const group = normalizeText(groupLocation);
+  const profile = normalizeText(profileLocation);
+  return !!group && !!profile && (group.includes(profile) || profile.includes(group));
 };
 
 const Home = () => {
@@ -37,18 +48,83 @@ const Home = () => {
     queryFn: async () => (await supabase.from("groups").select("id,name,category,location,image_url").eq("status", "active").order("created_at", { ascending: false }).limit(8)).data ?? [],
   });
 
-  const { data: hot } = useQuery({
-    queryKey: ["home-hot"],
-    queryFn: async () => {
-      const res = await supabase.from("groups").select("id,name,category,location,image_url,description").eq("status", "active").order("created_at", { ascending: false }).range(8, 12);
-      return res.data ?? [];
-    },
-  });
-
   const { data: profile } = useQuery({
     queryKey: ["home-profile", user?.id],
     enabled: !!user,
     queryFn: async () => (await supabase.from("profiles").select("interests,location").eq("id", user!.id).maybeSingle()).data,
+  });
+
+  const { data: hot } = useQuery({
+    queryKey: ["home-hot", user?.id, profile?.interests, profile?.location],
+    queryFn: async () => {
+      const sinceIso = new Date(Date.now() - RECENT_ACTIVITY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const interests = (profile?.interests ?? []).map((interest) => normalizeText(interest)).filter(Boolean);
+      const profileLocation = profile?.location ?? null;
+
+      const { data: groups } = await supabase
+        .from("groups")
+        .select("id,name,category,location,image_url,description,created_at,is_private")
+        .eq("status", "active")
+        .eq("is_private", false)
+        .gte("created_at", sinceIso)
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      const recentGroups = (groups ?? []) as HomeGroup[];
+      const candidateIds = new Set(recentGroups.map((group) => group.id));
+
+      const [postsRes, messagesRes, eventsRes] = await Promise.all([
+        supabase.from("board_posts").select("group_id,created_at").gte("created_at", sinceIso).limit(500),
+        supabase.from("group_messages").select("group_id,created_at").gte("created_at", sinceIso).limit(500),
+        supabase.from("events").select("group_id,created_at").gte("created_at", sinceIso).limit(500),
+      ]);
+
+      for (const row of postsRes.data ?? []) candidateIds.add(row.group_id);
+      for (const row of messagesRes.data ?? []) candidateIds.add(row.group_id);
+      for (const row of eventsRes.data ?? []) candidateIds.add(row.group_id);
+
+      if (candidateIds.size === 0) return [];
+
+      const knownGroups = new Map(recentGroups.map((group) => [group.id, group]));
+      const missingIds = Array.from(candidateIds).filter((groupId) => !knownGroups.has(groupId));
+
+      if (missingIds.length > 0) {
+        const { data: activeGroups } = await supabase
+          .from("groups")
+          .select("id,name,category,location,image_url,description,created_at,is_private")
+          .in("id", missingIds)
+          .eq("status", "active")
+          .eq("is_private", false)
+          .limit(80);
+
+        for (const group of (activeGroups ?? []) as HomeGroup[]) {
+          knownGroups.set(group.id, group);
+        }
+      }
+
+      const scores = new Map<string, number>();
+      const bump = (groupId: string, amount: number) => scores.set(groupId, (scores.get(groupId) ?? 0) + amount);
+
+      for (const group of recentGroups) bump(group.id, 12);
+      for (const row of postsRes.data ?? []) bump(row.group_id, 5);
+      for (const row of messagesRes.data ?? []) bump(row.group_id, 2);
+      for (const row of eventsRes.data ?? []) bump(row.group_id, 8);
+
+      return Array.from(knownGroups.values())
+        .map((group) => {
+          const category = normalizeText(group.category);
+          const interestBonus = interests.length > 0 && interests.includes(category) ? 20 : 0;
+          const locationBonus = matchesLocation(group.location, profileLocation) ? 12 : 0;
+          const recencyBonus = group.created_at ? Math.max(0, 7 - Math.floor((Date.now() - new Date(group.created_at).getTime()) / (24 * 60 * 60 * 1000))) : 0;
+          return {
+            ...group,
+            activityScore: (scores.get(group.id) ?? 0) + interestBonus + locationBonus + recencyBonus,
+          };
+        })
+        .filter((group) => group.activityScore > 0)
+        .sort((a, b) => b.activityScore - a.activityScore)
+        .slice(0, 5);
+    },
   });
 
   const { data: forYou } = useQuery({
