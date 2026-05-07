@@ -18,11 +18,11 @@ export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNa
   ];
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-md min-h-screen bg-background relative pb-20 [@media_(min-width:600px)]:max-w-2xl">
+      <div className="mx-auto w-full max-w-md min-h-screen bg-background relative pb-20 [@media_(min-width:600px)]:max-w-2xl [@media_(min-width:700px)]:max-w-[820px]">
         {children}
       </div>
       {!hideNav && (
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40 [@media_(min-width:600px)]:max-w-2xl">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40 [@media_(min-width:600px)]:max-w-2xl [@media_(min-width:700px)]:max-w-[820px]">
           {!isKorean && (
             <div className="flex justify-center pt-1 pb-0">
               <NavLink to="/profile" className="text-[10px] text-muted-foreground flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60">
