@@ -10,10 +10,88 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { Language } from "@/i18n/translations";
+
+const adminLabels: Record<Language, {
+  title: string;
+  stats: string;
+  reports: string;
+  manage: string;
+  totalUsers: string;
+  groups: string;
+  classes: string;
+  trend: string;
+  days: string;
+  signups: string;
+}> = {
+  ko: {
+    title: "관리자",
+    stats: "통계",
+    reports: "신고",
+    manage: "관리",
+    totalUsers: "전체 사용자",
+    groups: "모임",
+    classes: "클래스",
+    trend: "가입·모임·신고 추이",
+    days: "일",
+    signups: "가입",
+  },
+  en: {
+    title: "Admin",
+    stats: "Stats",
+    reports: "Reports",
+    manage: "Manage",
+    totalUsers: "Total users",
+    groups: "Groups",
+    classes: "Classes",
+    trend: "Signups, groups, reports",
+    days: "d",
+    signups: "Signups",
+  },
+  ja: {
+    title: "管理者",
+    stats: "統計",
+    reports: "通報",
+    manage: "管理",
+    totalUsers: "全ユーザー",
+    groups: "グループ",
+    classes: "クラス",
+    trend: "登録・グループ・通報の推移",
+    days: "日",
+    signups: "登録",
+  },
+  zh: {
+    title: "管理员",
+    stats: "统计",
+    reports: "举报",
+    manage: "管理",
+    totalUsers: "全部用户",
+    groups: "圈子",
+    classes: "课程",
+    trend: "注册、圈子、举报趋势",
+    days: "天",
+    signups: "注册",
+  },
+  ru: {
+    title: "Администратор",
+    stats: "Статистика",
+    reports: "Жалобы",
+    manage: "Управление",
+    totalUsers: "Всего пользователей",
+    groups: "Группы",
+    classes: "Занятия",
+    trend: "Регистрации, группы, жалобы",
+    days: " дн.",
+    signups: "Регистрации",
+  },
+};
 
 const Admin = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { lang } = useLanguage();
+  const a = adminLabels[lang];
   const qc = useQueryClient();
 
   const { data: isAdmin, isLoading: roleLoading } = useQuery({
@@ -446,21 +524,21 @@ const Admin = () => {
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold flex-1">관리자</h1>
+          <h1 className="text-base font-bold flex-1">{a.title}</h1>
         </header>
 
         <Tabs defaultValue="stats" className="p-4">
           <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="stats">통계</TabsTrigger>
-            <TabsTrigger value="reports">신고</TabsTrigger>
-            <TabsTrigger value="manage">관리</TabsTrigger>
+            <TabsTrigger value="stats">{a.stats}</TabsTrigger>
+            <TabsTrigger value="reports">{a.reports}</TabsTrigger>
+            <TabsTrigger value="manage">{a.manage}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats" className="mt-4 grid grid-cols-2 gap-2">
             {[
-              { icon: UsersIcon, label: "전체 사용자", value: stats?.users, color: "bg-primary-soft text-primary" },
-              { icon: UsersIcon, label: "모임", value: stats?.groups, color: "bg-accent/10 text-accent" },
-              { icon: BookOpen, label: "클래스", value: stats?.classes, color: "bg-secondary text-secondary-foreground" },
+              { icon: UsersIcon, label: a.totalUsers, value: stats?.users, color: "bg-primary-soft text-primary" },
+              { icon: UsersIcon, label: a.groups, value: stats?.groups, color: "bg-accent/10 text-accent" },
+              { icon: BookOpen, label: a.classes, value: stats?.classes, color: "bg-secondary text-secondary-foreground" },
               { icon: MessageSquare, label: "DM", value: stats?.dms, color: "bg-muted text-foreground" },
             ].map((s, i) => (
               <div key={i} className="bg-card rounded-2xl p-4 border border-border">
@@ -472,7 +550,7 @@ const Admin = () => {
             <div className="col-span-2 bg-card rounded-2xl p-3 border border-border mt-2">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-primary" />가입·모임·신고 추이
+                  <TrendingUp className="h-4 w-4 text-primary" />{a.trend}
                 </h3>
                 <div className="flex gap-1">
                   {([7, 30, 90] as const).map((d) => (
@@ -480,7 +558,7 @@ const Admin = () => {
                       key={d}
                       onClick={() => setRangeDays(d)}
                       className={`text-[11px] px-2 py-1 rounded-md ${rangeDays === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-                    >{d}일</button>
+                    >{d}{a.days}</button>
                   ))}
                 </div>
               </div>
@@ -501,9 +579,9 @@ const Admin = () => {
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                    <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#g-users)" name="가입" />
-                    <Area type="monotone" dataKey="groups" stroke="hsl(var(--accent))" fill="url(#g-groups)" name="모임" />
-                    <Area type="monotone" dataKey="reports" stroke="hsl(var(--destructive))" fill="transparent" name="신고" />
+                    <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#g-users)" name={a.signups} />
+                    <Area type="monotone" dataKey="groups" stroke="hsl(var(--accent))" fill="url(#g-groups)" name={a.groups} />
+                    <Area type="monotone" dataKey="reports" stroke="hsl(var(--destructive))" fill="transparent" name={a.reports} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
