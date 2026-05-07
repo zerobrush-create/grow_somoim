@@ -32,7 +32,6 @@ const BOARD_FILTERS: { id: BoardFilter; label: string }[] = [
   { id: "notice", label: "공지" },
   { id: "review", label: "모임후기" },
   { id: "greeting", label: "가입인사" },
-  { id: "free", label: "자유" },
 ];
 
 const getPostFilter = (post: Post): Exclude<BoardFilter, "all"> => {
