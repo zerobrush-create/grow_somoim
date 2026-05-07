@@ -349,7 +349,7 @@ export const translateRuntimeText = (value: string, lang: Language) => {
   const trimmed = value.trim();
   if (!trimmed || !/[가-힣]/.test(trimmed)) return value;
 
-  const exact = common[lang][trimmed] ?? groupForm[lang][trimmed];
+  const exact = common[lang][trimmed] ?? groupForm[lang][trimmed] ?? phrases[lang][trimmed];
   if (exact) return value.replace(trimmed, exact);
 
   let translated = trimmed
@@ -366,7 +366,8 @@ export const translateRuntimeText = (value: string, lang: Language) => {
     .replace(/방금/g, lang === "en" ? "Just now" : lang === "ja" ? "たった今" : lang === "zh" ? "刚刚" : "Только что")
     .replace(/어제/g, lang === "en" ? "Yesterday" : lang === "ja" ? "昨日" : lang === "zh" ? "昨天" : "Вчера");
 
-  for (const [ko, out] of Object.entries(phrases[lang])) {
+  for (const [ko, out] of Object.entries(phrases[lang]).sort((a, b) => b[0].length - a[0].length)) {
+    if (ko.length < 2) continue;
     translated = translated.replaceAll(ko, out);
   }
 

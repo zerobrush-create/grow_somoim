@@ -87,7 +87,7 @@ const Profile = () => {
   }
   if (!user) return <Navigate to="/login" replace />;
 
-  const name = profile?.name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "회원";
+  const name = profile?.name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? t.search.userDefault;
   const referralCode = appUser?.referral_code ?? user.id.replace(/-/g, "").slice(0, 8).toUpperCase();
   const isAdmin = roles?.some((r) => r.role === "admin");
   const isInstructor = roles?.some((r) => r.role === "instructor");
@@ -104,21 +104,22 @@ const Profile = () => {
     try {
       await supabase.from("profiles").delete().eq("id", user!.id);
       await signOut();
-      toast({ title: "탈퇴 완료", description: "계정이 삭제되었어요. 이용해주셔서 감사합니다." });
+      toast({ title: t.profile.deleteDone, description: t.profile.deleteDoneDesc });
       navigate("/login", { replace: true });
     } catch {
-      toast({ title: "탈퇴 실패", description: "잠시 후 다시 시도해주세요.", variant: "destructive" });
+      toast({ title: t.profile.deleteFail, description: t.profile.retryLater, variant: "destructive" });
     }
   };
 
   return (
     <MobileShell>
+      <div data-i18n-skip>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">{t.profile.title}</h1>
         <div className="flex gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-muted transition-smooth w-9 h-9 flex items-center justify-center text-base" aria-label="언어 변경">
+              <button className="p-2 rounded-full hover:bg-muted transition-smooth w-9 h-9 flex items-center justify-center text-base" aria-label={t.profile.languageChange}>
                 {LANGUAGE_LABELS[lang].flag}
               </button>
             </DropdownMenuTrigger>
@@ -135,7 +136,7 @@ const Profile = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="다크모드 토글">
+          <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label={t.profile.themeToggle}>
             {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           {isAdmin && (
@@ -143,11 +144,11 @@ const Profile = () => {
               <Shield className="h-5 w-5" />
             </button>
           )}
-          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-muted transition-smooth" aria-label="알림">
+          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-muted transition-smooth" aria-label={t.profile.notifications}>
             <Bell className="h-5 w-5" />
             {unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
           </button>
-          <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label="설정"><Settings className="h-5 w-5" /></button>
+          <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted transition-smooth" aria-label={t.profile.settings}><Settings className="h-5 w-5" /></button>
         </div>
       </header>
 
@@ -161,13 +162,13 @@ const Profile = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold">{name}</h2>
-                {isAdmin && <Badge className="bg-accent text-accent-foreground border-0">관리자</Badge>}
-                {isInstructor && <Badge variant="outline">강사</Badge>}
+                {isAdmin && <Badge className="bg-accent text-accent-foreground border-0">{t.profile.roleAdmin}</Badge>}
+                {isInstructor && <Badge variant="outline">{t.profile.roleInstructor}</Badge>}
               </div>
               {profile?.location && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" /> {profile.location}</p>}
               {profile?.bio && <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{profile.bio}</p>}
             </div>
-            <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted" aria-label="편집"><Edit className="h-4 w-4 text-muted-foreground" /></button>
+            <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted" aria-label={t.profile.editProfile}><Edit className="h-4 w-4 text-muted-foreground" /></button>
           </div>
 
           <div className="grid grid-cols-3 divide-x divide-border mt-4 pt-4 border-t border-border">
@@ -227,7 +228,7 @@ const Profile = () => {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-muted/60 rounded-xl px-3 py-2 text-[11px] text-muted-foreground truncate">{referralLink}</div>
-            <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0" aria-label="링크 복사"><Copy className="h-4 w-4" /></button>
+            <button onClick={copyCode} className="h-10 w-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center transition-smooth hover:bg-primary hover:text-primary-foreground flex-shrink-0" aria-label={t.profile.copyReferral}><Copy className="h-4 w-4" /></button>
           </div>
           {copied && <p className="text-[11px] text-primary text-center mt-2 animate-fade-in">{t.profile.linkCopied}</p>}
         </div>
@@ -299,7 +300,7 @@ const Profile = () => {
       </section>
 
       <section className="px-4 pt-4 pb-4 space-y-2">
-        <Button variant="ghost" onClick={async () => { await signOut(); toast({ title: "로그아웃 되었어요" }); navigate("/login", { replace: true }); }} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button variant="ghost" onClick={async () => { await signOut(); toast({ title: t.profile.logoutDone }); navigate("/login", { replace: true }); }} className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
           <LogOut className="h-4 w-4 mr-2" />{t.profile.logout}
         </Button>
         <Button variant="ghost" onClick={() => setDeleteDialogOpen(true)} className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/5 text-xs">
@@ -325,6 +326,7 @@ const Profile = () => {
       </AlertDialog>
 
       <div className="h-4" />
+      </div>
     </MobileShell>
   );
 };

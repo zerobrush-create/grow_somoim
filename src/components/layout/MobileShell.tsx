@@ -27,7 +27,7 @@ export const MobileShell = ({ children, hideNav }: { children: ReactNode; hideNa
             <div className="flex justify-center pt-1 pb-0">
               <NavLink to="/profile" className="text-[10px] text-muted-foreground flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60">
                 <span>{LANGUAGE_LABELS[lang].flag}</span>
-                <span>{LANGUAGE_LABELS[lang].label} · 내정보에서 변경</span>
+                <span>{LANGUAGE_LABELS[lang].label} · {t.profile.languageHint}</span>
               </NavLink>
             </div>
           )}
