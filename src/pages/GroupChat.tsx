@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2, Reply, Users, Share2 } from "lucide-react";
+import { ArrowLeft, Send, Video, Paperclip, Languages, Trash2, Reply, Users, Share2, Smile } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useMessageTranslation } from "@/hooks/useMessageTranslation";
@@ -34,6 +35,7 @@ type SenderProfile = {
 
 const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || "사용자";
 const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
+const EMOJIS = ["😀", "😄", "😊", "😍", "🥰", "😂", "👍", "👏", "🙏", "💚", "🔥", "✨", "🎉", "🙌", "🤝", "😭", "😎", "🤔", "😮", "💪", "🌱", "📚", "🏃", "🎬"];
 
 const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
   const params = useParams();
@@ -47,6 +49,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
   const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const [onlineCount, setOnlineCount] = useState(0);
@@ -182,6 +185,21 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
     if (now - lastTypingSentRef.current < 1500) return;
     lastTypingSentRef.current = now;
     ch.send({ type: "broadcast", event: "typing", payload: { userId: user.id } });
+  };
+
+  const focusInput = () => {
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const selectReplyTarget = (target: ReplyTarget) => {
+    setReplyTarget(target);
+    focusInput();
+  };
+
+  const appendEmoji = (emoji: string) => {
+    setText((value) => `${value}${emoji}`);
+    broadcastTyping();
+    focusInput();
   };
 
   // 자동 스크롤
@@ -376,7 +394,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
                     </span>
                     <button
                       type="button"
-                      onClick={() => setReplyTarget({ id: m.id, senderName, body: getMessagePreview(m.content) })}
+                      onClick={() => selectReplyTarget({ id: m.id, senderName, body: getMessagePreview(m.content) })}
                       className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary"
                     >
                       <Reply className="h-3 w-3" />
@@ -425,7 +443,30 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
           <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadFile.isPending} className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground" aria-label="이미지 첨부">
             <Paperclip className="h-4 w-4" />
           </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground" aria-label="이모지">
+                <Smile className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-64 rounded-2xl p-2">
+              <div className="grid grid-cols-6 gap-1">
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => appendEmoji(emoji)}
+                    className="h-9 rounded-xl text-lg transition-smooth hover:bg-muted"
+                    aria-label={`이모지 ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Input
+            ref={inputRef}
             value={text}
             onChange={(e) => { setText(e.target.value); broadcastTyping(); }}
             placeholder="메시지 입력..."
