@@ -5,6 +5,7 @@ import { userProfile, stores, pointTransactions } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText, formatDate } from "@/i18n/format";
 
 type PayTab = "barcode" | "history";
 
@@ -28,12 +29,13 @@ const BarcodeVisual = ({ value }: { value: string }) => {
 };
 
 const PayModal = ({
-  points, onConfirm, onClose, t,
+  points, onConfirm, onClose, t, tr,
 }: {
   points: number;
   onConfirm: (amount: number, storeName: string) => void;
   onClose: () => void;
   t: any;
+  tr: (value?: string | null) => string;
 }) => {
   const [amount, setAmount] = useState("");
   const [selectedStore, setSelectedStore] = useState(stores[0]);
@@ -61,7 +63,7 @@ const PayModal = ({
               <button key={s.id} onClick={() => setSelectedStore(s)} className={cn(
                 "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-smooth",
                 selectedStore.id === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-              )}>{s.name}</button>
+              )}>{tr(s.name)}</button>
             ))}
           </div>
         </div>
@@ -98,7 +100,8 @@ const PayModal = ({
 
 const Payment = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
   const [activeTab, setActiveTab] = useState<PayTab>("barcode");
   const [currentPoints, setCurrentPoints] = useState(userProfile.points);
   const [history, setHistory] = useState(pointTransactions);
@@ -131,7 +134,7 @@ const Payment = () => {
     setHistory((h) => [{
       id: `pt${Date.now()}`, type: "use", amount,
       description: `${storeName} ${t.payment.payComplete}`,
-      date: new Date().toLocaleDateString(),
+      date: formatDate(new Date(), lang),
     }, ...h]);
     setShowPayModal(false);
     setPayResult({ amount, store: storeName });
@@ -181,7 +184,7 @@ const Payment = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-primary">{payResult.amount.toLocaleString()}P</h2>
                   <p className="text-sm text-muted-foreground mt-1">{t.payment.payComplete}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{payResult.store}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{tr(payResult.store)}</p>
                   <p className="text-sm font-semibold mt-4">
                     {t.payment.remaining}: <span className="text-primary">{currentPoints.toLocaleString()} P</span>
                   </p>
@@ -232,10 +235,10 @@ const Payment = () => {
                         {s.category === "카페" ? "☕" : s.category === "서점" ? "📚" : s.category === "요가" ? "🧘" : s.category === "공방" ? "🏺" : "🍽"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate">{s.name}</p>
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-0.5 mt-0.5"><MapPin className="h-3 w-3" /> {s.address}</p>
+                        <p className="text-sm font-bold truncate">{tr(s.name)}</p>
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-0.5 mt-0.5"><MapPin className="h-3 w-3" /> {tr(s.address)}</p>
                       </div>
-                      <span className="text-[11px] font-semibold text-primary bg-primary-soft px-2 py-1 rounded-lg flex-shrink-0">{s.discount}</span>
+                      <span className="text-[11px] font-semibold text-primary bg-primary-soft px-2 py-1 rounded-lg flex-shrink-0">{tr(s.discount)}</span>
                     </div>
                   ))}
                 </div>
@@ -259,7 +262,7 @@ const Payment = () => {
                       {item.type === "earn" ? <TrendingUp className="h-4 w-4 text-primary" /> : <TrendingDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{item.description}</p>
+                      <p className="text-sm font-semibold truncate">{tr(item.description)}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{item.date}</p>
                     </div>
                     <span className={cn("text-sm font-bold flex-shrink-0", item.type === "earn" ? "text-primary" : "text-muted-foreground")}>
@@ -275,7 +278,7 @@ const Payment = () => {
       </div>
 
       {showPayModal && (
-        <PayModal points={currentPoints} onConfirm={handlePayConfirm} onClose={() => setShowPayModal(false)} t={t} />
+        <PayModal points={currentPoints} onConfirm={handlePayConfirm} onClose={() => setShowPayModal(false)} t={t} tr={tr} />
       )}
     </>
   );

@@ -7,12 +7,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PushToggle } from "@/components/PushToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText, formatDateTime } from "@/i18n/format";
 
 const Notifications = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -60,9 +62,9 @@ const Notifications = () => {
                 {n.is_read ? <Check className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{n.title}</p>
-                {n.body && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>}
-                <p className="text-[11px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                <p className="text-sm font-semibold">{tr(n.title)}</p>
+                {n.body && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{tr(n.body)}</p>}
+                <p className="text-[11px] text-muted-foreground mt-1">{formatDateTime(n.created_at, lang, { dateStyle: "medium", timeStyle: "medium" })}</p>
               </div>
             </button>
           )) : (

@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/ReportDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText, formatDate } from "@/i18n/format";
 
 type Tab = "intro" | "reviews";
 
@@ -22,7 +23,8 @@ const ClassDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
@@ -141,8 +143,8 @@ const ClassDetail = () => {
         </div>
 
         <div className="px-4 pt-5">
-          {cls.category && <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{cls.category}</Badge>}
-          <h1 className="text-xl font-bold mt-2 leading-snug">{cls.title}</h1>
+          {cls.category && <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{tr(cls.category)}</Badge>}
+          <h1 className="text-xl font-bold mt-2 leading-snug">{tr(cls.title)}</h1>
           {user && !isInstructor && (
             <div className="flex justify-end -mt-1">
               <ReportDialog targetType="class" targetId={String(cls.id)} />
@@ -156,7 +158,7 @@ const ClassDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-            {cls.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {cls.location}</span>}
+            {cls.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {tr(cls.location)}</span>}
             <span className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-accent text-accent" />
               <span className="font-bold text-foreground">{avgRating}</span>
@@ -166,9 +168,9 @@ const ClassDetail = () => {
         </div>
 
         <div className="mx-4 mt-4 bg-primary-soft rounded-2xl p-4 grid grid-cols-3 divide-x divide-primary/10">
-          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.fee}</p><p className="text-base font-bold text-primary mt-0.5">{cls.price ?? t.classDetail.free}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.fee}</p><p className="text-base font-bold text-primary mt-0.5">{tr(cls.price) || t.classDetail.free}</p></div>
           <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.students}</p><p className="text-base font-bold text-primary mt-0.5">{enrollCount}/{cls.max_students ?? "∞"}</p></div>
-          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.status}</p><p className="text-base font-bold text-primary mt-0.5">{cls.status}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.status}</p><p className="text-base font-bold text-primary mt-0.5">{tr(cls.status)}</p></div>
         </div>
 
         <div className="flex border-b border-border mt-5">
@@ -185,18 +187,18 @@ const ClassDetail = () => {
             <div className="px-4 pt-5 pb-4 space-y-5">
               <section>
                 <h2 className="text-base font-bold mb-2">{t.classDetail.intro}</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{cls.description || t.classDetail.noDescription}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{tr(cls.description) || t.classDetail.noDescription}</p>
               </section>
               {cls.curriculum && (
                 <section>
                   <h2 className="text-base font-bold mb-2">{t.classDetail.curriculum}</h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{cls.curriculum}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{tr(cls.curriculum)}</p>
                 </section>
               )}
               {cls.schedule && (
                 <section>
                   <h2 className="text-base font-bold mb-2">{t.classDetail.schedule}</h2>
-                  <p className="text-sm text-muted-foreground">{cls.schedule}</p>
+                  <p className="text-sm text-muted-foreground">{tr(cls.schedule)}</p>
                 </section>
               )}
             </div>
@@ -224,8 +226,8 @@ const ClassDetail = () => {
                   <div className="flex items-center gap-1 mb-1">
                     {[1,2,3,4,5].map((s) => <Star key={s} className={cn("h-3.5 w-3.5", s <= r.rating ? "fill-accent text-accent" : "text-muted")} />)}
                   </div>
-                  <p className="text-sm">{r.content}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm">{tr(r.content)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{formatDate(r.created_at, lang)}</p>
                 </div>
               )) : (
                 <div className="text-center py-12 text-sm text-muted-foreground">{t.classDetail.noReviews}</div>

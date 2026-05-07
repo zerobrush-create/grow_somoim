@@ -15,7 +15,7 @@ import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { translateRuntimeText } from "@/i18n/runtimeTranslations";
+import { displayText as translateDisplayText } from "@/i18n/format";
 
 const Profile = () => {
   const { user, loading, signOut } = useAuth();
@@ -92,7 +92,7 @@ const Profile = () => {
   const referralCode = appUser?.referral_code ?? user.id.replace(/-/g, "").slice(0, 8).toUpperCase();
   const isAdmin = roles?.some((r) => r.role === "admin");
   const isInstructor = roles?.some((r) => r.role === "instructor");
-  const displayText = (value?: string | null) => (value ? translateRuntimeText(value, lang) : "");
+  const displayText = (value?: string | null) => translateDisplayText(value, lang);
 
   const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
 
@@ -115,7 +115,7 @@ const Profile = () => {
 
   return (
     <MobileShell>
-      <div data-i18n-skip>
+      <div>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">{t.profile.title}</h1>
         <div className="flex gap-1">
@@ -168,7 +168,7 @@ const Profile = () => {
                 {isInstructor && <Badge variant="outline">{t.profile.roleInstructor}</Badge>}
               </div>
               {profile?.location && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" /> {displayText(profile.location)}</p>}
-              {profile?.bio && <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{profile.bio}</p>}
+              {profile?.bio && <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{displayText(profile.bio)}</p>}
             </div>
             <button onClick={() => navigate("/profile/edit")} className="p-2 rounded-full hover:bg-muted" aria-label={t.profile.editProfile}><Edit className="h-4 w-4 text-muted-foreground" /></button>
           </div>
@@ -247,7 +247,7 @@ const Profile = () => {
               <Link key={g.id} to={`/groups/${g.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-smooth">
                 <img src={g.image_url || logo} alt={g.name} className="h-10 w-10 rounded-xl object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{g.name}</p>
+                  <p className="text-sm font-semibold truncate">{displayText(g.name)}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{displayText(g.location)}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />

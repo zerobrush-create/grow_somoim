@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText } from "@/i18n/format";
 
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "온라인"];
 type SortKey = "recent" | "popular" | "rating";
@@ -29,7 +30,8 @@ const Groups = () => {
   const { data: groups, isLoading, error } = useGroups();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
 
   const SORTS: { id: SortKey; label: string }[] = [
     { id: "recent", label: t.groups.sortRecent },
@@ -110,10 +112,10 @@ const Groups = () => {
           <Link
             to="/groups/new"
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-soft transition-smooth hover:bg-primary/90"
-            aria-label="소모임 개설"
+            aria-label={t.groups.create}
           >
             <Plus className="h-4 w-4" />
-            <span>소모임 개설</span>
+            <span>{t.groups.create}</span>
           </Link>
         </div>
         <form onSubmit={onSearchSubmit} className="relative mb-3">
@@ -127,7 +129,7 @@ const Groups = () => {
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
-            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
+            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={tr("지우기")}>
               <X className="h-4 w-4" />
             </button>
           )}
@@ -137,7 +139,7 @@ const Groups = () => {
               {history.map((h) => (
                 <div key={h.id} className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-lg">
                   <button type="button" onMouseDown={() => { setQuery(h.query); setShowHistory(false); }} className="flex-1 text-left text-sm truncate">{h.query}</button>
-                  <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label="삭제"><X className="h-3 w-3" /></button>
+                    <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label={tr("삭제")}><X className="h-3 w-3" /></button>
                 </div>
               ))}
             </div>
@@ -233,14 +235,14 @@ const Groups = () => {
               </div>
               <div className="flex-1 min-w-0 py-0.5">
                 <Badge variant="secondary" className="bg-primary-soft text-primary border-0 text-[10px] py-0">
-                  {g.category}
+                  {tr(g.category)}
                 </Badge>
-                <p className="text-base font-bold mt-1 line-clamp-1">{g.name}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{g.description}</p>
+                <p className="text-base font-bold mt-1 line-clamp-1">{tr(g.name)}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{tr(g.description)}</p>
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
                   {g.location && (
                     <span className="flex items-center gap-0.5">
-                      <MapPin className="h-3 w-3" /> {g.location}
+                      <MapPin className="h-3 w-3" /> {tr(g.location)}
                     </span>
                   )}
                   <span className="flex items-center gap-0.5">

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText } from "@/i18n/format";
 
 type SortKey = "recent" | "popular" | "rating";
 
@@ -22,7 +23,8 @@ const Classes = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
 
   const CLASS_FILTERS = [
     { id: "전체", label: t.classes.catAll },
@@ -137,7 +139,7 @@ const Classes = () => {
             className="pl-9 pr-9 h-10 rounded-full bg-muted border-0"
           />
           {query && (
-            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="지우기">
+            <button type="button" onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={tr("지우기")}>
               <X className="h-4 w-4" />
             </button>
           )}
@@ -149,7 +151,7 @@ const Classes = () => {
                 return (
                   <div key={h.id} className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-lg">
                     <button type="button" onMouseDown={() => { setQuery(text); setShowHistory(false); }} className="flex-1 text-left text-sm truncate">{text}</button>
-                    <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label="삭제"><X className="h-3 w-3" /></button>
+                    <button type="button" onMouseDown={() => removeHistory.mutate(h.id)} className="text-muted-foreground" aria-label={tr("삭제")}><X className="h-3 w-3" /></button>
                   </div>
                 );
               })}
@@ -192,8 +194,8 @@ const Classes = () => {
                 {c.image_url ? <img src={c.image_url} alt={c.title} loading="lazy" className="h-full w-full object-cover" /> : <BookOpen className="h-10 w-10 text-muted-foreground/30" />}
               </div>
               <div className="p-3">
-                {c.category && <p className="text-[10px] font-semibold text-primary">{c.category}</p>}
-                <p className="text-sm font-bold mt-0.5 line-clamp-2 leading-tight min-h-[2.5rem]">{c.title}</p>
+                {c.category && <p className="text-[10px] font-semibold text-primary">{tr(c.category)}</p>}
+                <p className="text-sm font-bold mt-0.5 line-clamp-2 leading-tight min-h-[2.5rem]">{tr(c.title)}</p>
                 {reviewAgg?.[c.id] && (
                   <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-0.5">
                     <Star className="h-3 w-3 fill-accent text-accent" />
@@ -203,10 +205,10 @@ const Classes = () => {
                 )}
                 {c.location && (
                   <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-0.5">
-                    <MapPin className="h-3 w-3" /> {c.location}
+                    <MapPin className="h-3 w-3" /> {tr(c.location)}
                   </p>
                 )}
-                <p className="text-sm font-bold mt-1.5">{c.price ?? t.classes.free}</p>
+                <p className="text-sm font-bold mt-1.5">{tr(c.price) || t.classes.free}</p>
               </div>
             </Link>
           ))

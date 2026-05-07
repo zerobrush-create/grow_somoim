@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText, formatMonthTitle, weekdayLabels } from "@/i18n/format";
 
 const Attendance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = today.getMonth();
@@ -62,7 +64,7 @@ const Attendance = () => {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const monthCount = records?.size ?? 0;
-  const weekdays = t.attendance.weekdays.split(",");
+  const weekdays = weekdayLabels(lang);
 
   return (
     <MobileShell>
@@ -87,7 +89,7 @@ const Attendance = () => {
 
       <section className="px-4 pt-5">
         <div className="bg-card rounded-2xl p-4 shadow-soft">
-          <div className="flex items-center gap-2 mb-3"><CalIcon className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">{yyyy}. {mm + 1}</h3></div>
+          <div className="flex items-center gap-2 mb-3"><CalIcon className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">{formatMonthTitle(yyyy, mm, lang)}</h3></div>
           <div className="grid grid-cols-7 text-center text-[10px] text-muted-foreground mb-1">
             {weekdays.map((d) => <div key={d}>{d}</div>)}
           </div>
@@ -114,8 +116,8 @@ const Attendance = () => {
             {badges.map((b) => (
               <div key={b.id} className="bg-card rounded-2xl p-3 shadow-soft text-center">
                 <div className="h-12 w-12 rounded-full gradient-primary mx-auto flex items-center justify-center text-2xl">🏆</div>
-                <p className="text-sm font-bold mt-2">{b.title}</p>
-                <p className="text-[10px] text-muted-foreground line-clamp-2">{b.description}</p>
+                <p className="text-sm font-bold mt-2">{tr(b.title)}</p>
+                <p className="text-[10px] text-muted-foreground line-clamp-2">{tr(b.description)}</p>
               </div>
             ))}
           </div>

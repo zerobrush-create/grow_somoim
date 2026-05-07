@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText } from "@/i18n/format";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
 
@@ -23,9 +24,10 @@ const GroupDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const { data: group, isLoading } = useGroup(id);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
+  const tr = (value?: string | null) => displayText(value, lang);
 
   const tabs: { id: Tab; emoji: string; label: string }[] = [
     { id: "intro", emoji: "🏠", label: t.groupDetail.tabIntro },
@@ -206,13 +208,13 @@ const GroupDetail = () => {
         </div>
 
         <div className="px-4 pt-5">
-          <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{group.category}</Badge>
+          <Badge className="bg-primary-soft text-primary border-0 hover:bg-primary-soft">{tr(group.category)}</Badge>
           <div className="flex items-start justify-between gap-2 mt-2">
-            <h1 className="text-2xl font-bold">{group.name}</h1>
+            <h1 className="text-2xl font-bold">{tr(group.name)}</h1>
             {user && !isOwner && <ReportDialog targetType="group" targetId={group.id} />}
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-            {group.location && <MapLink location={group.location} className="text-sm text-muted-foreground" />}
+            {group.location && <MapLink location={group.location} label={tr(group.location)} className="text-sm text-muted-foreground" />}
             <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {group.members}{t.groups.membersUnit}</span>
           </div>
         </div>
@@ -255,7 +257,7 @@ const GroupDetail = () => {
             <section className="px-4 pt-6 pb-4">
               <h2 className="text-base font-bold mb-2">{t.groupDetail.groupIntro}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                {group.description || t.groupDetail.noDescription}
+                {tr(group.description) || t.groupDetail.noDescription}
               </p>
             </section>
           )}

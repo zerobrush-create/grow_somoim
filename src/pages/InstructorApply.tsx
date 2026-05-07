@@ -101,13 +101,13 @@ const InstructorApply = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-10">
-        <header data-i18n-skip className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-base font-bold flex-1">{copy.title}</h1>
         </header>
-        <div data-i18n-skip className="p-4 space-y-4">
+        <div className="p-4 space-y-4">
           <div className="bg-card rounded-2xl p-5 shadow-soft">
             <h2 className="text-lg font-bold mb-2">{copy.headline}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">{copy.description}</p>

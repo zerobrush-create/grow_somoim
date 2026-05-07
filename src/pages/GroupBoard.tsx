@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { MentionInput } from "@/components/MentionInput";
 import { ImageUploader } from "@/components/ImageUploader";
 import { HashtagText } from "@/components/HashtagText";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { displayText, formatDate, formatDateTime } from "@/i18n/format";
 
 type BoardFilter = "all" | "notice" | "review" | "greeting" | "free";
 
@@ -48,6 +50,8 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { lang } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
   const [filter, setFilter] = useState<BoardFilter>("all");
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -99,8 +103,8 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!user || !id) throw new Error("로그인이 필요합니다");
-      if (!title.trim() || !content.trim()) throw new Error("제목과 내용을 입력해주세요");
+      if (!user || !id) throw new Error(tr("로그인이 필요합니다"));
+      if (!title.trim() || !content.trim()) throw new Error(tr("제목과 내용을 입력해주세요"));
       const { data: post, error } = await supabase.from("board_posts").insert({
         group_id: id, author_id: user.id, title: title.trim(), content: content.trim(),
       }).select("id").single();
@@ -110,11 +114,11 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
       }
     },
     onSuccess: () => {
-      toast({ title: "게시글이 등록되었어요" });
+      toast({ title: tr("게시글이 등록되었어요") });
       setOpen(false); setTitle(""); setContent(""); setImages([]);
       qc.invalidateQueries({ queryKey: ["board-posts", id] });
     },
-    onError: (e: Error) => toast({ title: "등록 실패", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: tr("등록 실패"), description: e.message, variant: "destructive" }),
   });
 
   const visiblePosts = (posts ?? []).filter((post) => filter === "all" || getPostFilter(post) === filter);
@@ -124,10 +128,10 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
       <div className={shellClassName}>
         {!embedded && (
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={tr("뒤로")}>
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold flex-1 truncate">{group?.name ?? "게시판"}</h1>
+          <h1 className="text-base font-bold flex-1 truncate">{tr(group?.name) || tr("게시판")}</h1>
         </header>
         )}
 
@@ -142,7 +146,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
                 filter === item.id ? "bg-foreground text-background" : "bg-muted text-foreground hover:bg-secondary"
               )}
             >
-              {item.label}
+              {tr(item.label)}
             </button>
           ))}
         </div>
@@ -159,39 +163,39 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
                 <button key={p.id} onClick={() => setOpenPostId(p.id)} className="w-full text-left px-4 py-4 hover:bg-muted/40 transition-smooth">
                   <div className="flex items-center gap-2 mb-1.5">
                     {p.is_pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
-                    <span className="text-sm font-bold flex-1 truncate">{p.title}</span>
-                    {filterLabel && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{filterLabel}</span>}
+                    <span className="text-sm font-bold flex-1 truncate">{tr(p.title)}</span>
+                    {filterLabel && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{tr(filterLabel)}</span>}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{p.content}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{tr(p.content)}</p>
                   <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
                     <Avatar className="h-5 w-5"><AvatarImage src={a?.avatar_url ?? undefined} /><AvatarFallback>{(a?.name ?? "?").slice(0,1)}</AvatarFallback></Avatar>
                     <span>{a?.name ?? a?.email ?? "익명"}</span>
                     <span>·</span>
-                    <span>{new Date(p.created_at).toLocaleDateString("ko-KR")}</span>
+                    <span>{formatDate(p.created_at, lang)}</span>
                   </div>
                 </button>
               );
             })
           ) : (
-            <div className="text-center py-20 text-sm text-muted-foreground">아직 게시글이 없어요</div>
+            <div className="text-center py-20 text-sm text-muted-foreground">{tr("아직 게시글이 없어요")}</div>
           )}
         </div>
 
         {isMember && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "fixed bottom-24 right-6" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label="글쓰기">
+              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "fixed bottom-24 right-6" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
                 <Plus className="h-6 w-6" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>새 게시글</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{tr("새 게시글")}</DialogTitle></DialogHeader>
               <div className="space-y-3 max-h-[70vh] overflow-y-auto">
-                <Input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
-                <Textarea placeholder="내용 입력 (#태그 사용 가능)" value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
+                <Input placeholder={tr("제목")} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
+                <Textarea placeholder={tr("내용 입력 (#태그 사용 가능)")} value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
                 <ImageUploader value={images} onChange={setImages} max={5} />
                 <Button onClick={() => create.mutate()} disabled={create.isPending} className="w-full gradient-primary">
-                  {create.isPending ? "등록 중..." : "등록"}
+                  {create.isPending ? tr("등록 중...") : tr("등록")}
                 </Button>
               </div>
             </DialogContent>
@@ -209,6 +213,8 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
 const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; onClose: () => void; canComment: boolean; userId?: string }) => {
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const { lang } = useLanguage();
+  const tr = (value?: string | null) => displayText(value, lang);
   const { data: post } = useQuery({
     queryKey: ["board-post", postId],
     queryFn: async () => (await supabase.from("board_posts").select("*").eq("id", postId).maybeSingle()).data,
@@ -229,7 +235,7 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
 
   const toggleLike = useMutation({
     mutationFn: async () => {
-      if (!userId) throw new Error("로그인이 필요합니다");
+      if (!userId) throw new Error(tr("로그인이 필요합니다"));
       if (liked) {
         await supabase.from("board_post_likes").delete().eq("post_id", postId).eq("user_id", userId);
       } else {
@@ -237,7 +243,7 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board-likes", postId] }),
-    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: tr("오류"), description: e.message, variant: "destructive" }),
   });
 
   const addComment = useMutation({
@@ -248,14 +254,14 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
       setText("");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board-comments", postId] }),
-    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: tr("오류"), description: e.message, variant: "destructive" }),
   });
 
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="pr-6">{post?.title ?? "..."}</DialogTitle></DialogHeader>
-        <HashtagText text={post?.content ?? ""} className="text-sm whitespace-pre-wrap text-foreground" />
+        <DialogHeader><DialogTitle className="pr-6">{tr(post?.title) || "..."}</DialogTitle></DialogHeader>
+        <HashtagText text={tr(post?.content) ?? ""} className="text-sm whitespace-pre-wrap text-foreground" />
         {postImgs && postImgs.length > 0 && (
           <div className="grid grid-cols-2 gap-2">
             {postImgs.map((img, i) => (
@@ -274,15 +280,15 @@ const PostDetail = ({ postId, onClose, canComment, userId }: { postId: number; o
         <div className="space-y-2">
           {comments?.map((c) => (
             <div key={c.id} className="text-sm bg-muted rounded-lg px-3 py-2">
-              <p className="text-[11px] text-muted-foreground mb-0.5">{new Date(c.created_at).toLocaleString("ko-KR")}</p>
-              <HashtagText text={c.content} />
+              <p className="text-[11px] text-muted-foreground mb-0.5">{formatDateTime(c.created_at, lang)}</p>
+              <HashtagText text={tr(c.content)} />
             </div>
           ))}
         </div>
         {canComment && (
           <form onSubmit={(e) => { e.preventDefault(); addComment.mutate(); }} className="flex gap-2 pt-2">
-            <div className="flex-1"><MentionInput value={text} onChange={setText} placeholder="댓글 작성... @로 멘션" maxLength={500} /></div>
-            <Button type="submit" disabled={addComment.isPending || !text.trim()}>등록</Button>
+            <div className="flex-1"><MentionInput value={text} onChange={setText} placeholder={tr("댓글 작성... @로 멘션")} maxLength={500} /></div>
+            <Button type="submit" disabled={addComment.isPending || !text.trim()}>{tr("등록")}</Button>
           </form>
         )}
       </DialogContent>

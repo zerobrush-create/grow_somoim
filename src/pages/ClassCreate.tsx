@@ -180,14 +180,14 @@ const ClassCreate = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-10">
-        <header data-i18n-skip className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={copy.back}>
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-base font-bold">{copy.title}</h1>
         </header>
 
-        <form data-i18n-skip onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="px-4 py-4 space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="px-4 py-4 space-y-4">
           <div><Label>{copy.titleLabel}</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={100} required /></div>
           <div><Label>{copy.category}</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder={copy.categoryPlaceholder} /></div>
           <div><Label>{copy.place}</Label><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder={copy.placePlaceholder} /></div>
