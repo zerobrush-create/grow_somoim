@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, ChevronDown, ChevronUp, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -37,6 +38,7 @@ const Home = () => {
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
   const { t } = useLanguage();
+  const [quickExpanded, setQuickExpanded] = useState(false);
 
   const { data: banners } = useQuery({
     queryKey: ["banners-active"],
@@ -174,6 +176,7 @@ const Home = () => {
     { to: "/instructor/apply", label: t.home.quickInstructor, icon: GraduationCap, color: "bg-sky-100 text-sky-700" },
     ...(isAdmin ? [{ to: "/admin", label: t.home.quickAdmin, icon: ShieldCheck, color: "bg-slate-100 text-slate-700" }] : []),
   ];
+  const visibleQuickMenu = quickExpanded ? quickMenu : quickMenu.slice(0, 5);
 
   const getCatLabel = (id: string) =>
     t.categories[id as keyof typeof t.categories] ?? id;
@@ -242,9 +245,22 @@ const Home = () => {
       </section>
 
       <section className="px-4 pt-6">
-        <h3 className="text-xs font-bold text-muted-foreground mb-2">{t.home.quickMenu}</h3>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-bold text-muted-foreground">{t.home.quickMenu}</h3>
+          {quickMenu.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setQuickExpanded((value) => !value)}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition-smooth hover:bg-primary-soft hover:text-primary"
+              aria-expanded={quickExpanded}
+            >
+              {quickExpanded ? t.home.quickCollapse : t.home.quickMore}
+              {quickExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-5 gap-2 [@media_(min-width:600px)]:grid-cols-8 [@media_(min-width:600px)]:gap-3">
-          {quickMenu.map((m) => (
+          {visibleQuickMenu.map((m) => (
             <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
               <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
                 <m.icon className="h-5 w-5" />

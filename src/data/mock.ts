@@ -48,6 +48,22 @@ export const categories = [
   { id: "travel", label: "여행", emoji: "✈️" },
   { id: "music", label: "음악", emoji: "🎵" },
   { id: "pet", label: "반려동물", emoji: "🐾" },
+  { id: "language", label: "언어", emoji: "🗣️" },
+  { id: "culture", label: "문화", emoji: "🏛️" },
+  { id: "art", label: "예술", emoji: "🖼️" },
+  { id: "reading", label: "독서", emoji: "📖" },
+  { id: "movie", label: "영화", emoji: "🎬" },
+  { id: "game", label: "게임", emoji: "🎮" },
+  { id: "tech", label: "IT", emoji: "💻" },
+  { id: "business", label: "비즈니스", emoji: "💼" },
+  { id: "finance", label: "재테크", emoji: "💰" },
+  { id: "parenting", label: "육아", emoji: "👶" },
+  { id: "health", label: "건강", emoji: "🧘" },
+  { id: "outdoor", label: "아웃도어", emoji: "⛰️" },
+  { id: "volunteer", label: "봉사", emoji: "🤝" },
+  { id: "social", label: "친목", emoji: "🥂" },
+  { id: "cooking", label: "요리", emoji: "🍳" },
+  { id: "craft", label: "공예", emoji: "🧶" },
 ];
 
 export const groups: Group[] = [
