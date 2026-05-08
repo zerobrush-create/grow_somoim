@@ -38,6 +38,7 @@ const Home = () => {
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
   const { t } = useLanguage();
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [quickExpanded, setQuickExpanded] = useState(false);
 
   const { data: banners } = useQuery({
@@ -177,6 +178,12 @@ const Home = () => {
     ...(isAdmin ? [{ to: "/admin", label: t.home.quickAdmin, icon: ShieldCheck, color: "bg-slate-100 text-slate-700" }] : []),
   ];
   const visibleQuickMenu = quickExpanded ? quickMenu : quickMenu.slice(0, 5);
+  const toggleQuickMenu = () => {
+    setQuickMenuOpen((value) => {
+      if (value) setQuickExpanded(false);
+      return !value;
+    });
+  };
 
   const getCatLabel = (id: string) =>
     t.categories[id as keyof typeof t.categories] ?? id;
@@ -245,9 +252,17 @@ const Home = () => {
       </section>
 
       <section className="px-4 pt-6">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="text-xs font-bold text-muted-foreground">{t.home.quickMenu}</h3>
-          {quickMenu.length > 5 && (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={toggleQuickMenu}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-4 py-2 text-sm font-bold text-primary transition-smooth hover:bg-primary hover:text-primary-foreground"
+            aria-expanded={quickMenuOpen}
+          >
+            {t.home.quickMenu}
+            {quickMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          {quickMenuOpen && quickMenu.length > 5 && (
             <button
               type="button"
               onClick={() => setQuickExpanded((value) => !value)}
@@ -259,16 +274,18 @@ const Home = () => {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-5 gap-2 [@media_(min-width:600px)]:grid-cols-8 [@media_(min-width:600px)]:gap-3">
-          {visibleQuickMenu.map((m) => (
-            <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
-                <m.icon className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-medium text-foreground text-center leading-tight">{m.label}</span>
-            </Link>
-          ))}
-        </div>
+        {quickMenuOpen && (
+          <div className="grid grid-cols-5 gap-2 [@media_(min-width:600px)]:grid-cols-8 [@media_(min-width:600px)]:gap-3">
+            {visibleQuickMenu.map((m) => (
+              <Link key={m.to} to={m.to} className="flex flex-col items-center gap-1 group">
+                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-smooth group-hover:scale-105 ${m.color}`}>
+                  <m.icon className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-medium text-foreground text-center leading-tight">{m.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="pt-7">
