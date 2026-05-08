@@ -373,10 +373,10 @@ const Login = () => {
               <button
                 type="button"
                 aria-label={t.profile.language}
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-muted px-3 text-sm font-semibold transition-smooth hover:bg-muted/80"
+                className="inline-flex h-14 min-w-20 items-center justify-center gap-2 rounded-full bg-muted px-4 text-base font-semibold transition-smooth hover:bg-muted/80 shadow-soft"
               >
-                <span className="text-xl" aria-hidden="true">{LANGUAGE_LABELS[lang].flag}</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <span className="text-3xl leading-none" aria-hidden="true">{LANGUAGE_LABELS[lang].flag}</span>
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-40 rounded-xl">
@@ -386,7 +386,7 @@ const Login = () => {
                   onClick={() => setLang(code)}
                   className="gap-2 rounded-lg"
                 >
-                  <span className="text-lg" aria-hidden="true">{option.flag}</span>
+                  <span className="text-2xl" aria-hidden="true">{option.flag}</span>
                   <span>{option.label}</span>
                   {lang === code && <span className="ml-auto text-primary">✓</span>}
                 </DropdownMenuItem>
