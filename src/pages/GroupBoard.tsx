@@ -74,7 +74,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   });
 
   const isMember = membership?.status === "approved" || group?.owner_id === user?.id;
-  const rootClassName = embedded ? "bg-background" : "min-h-screen bg-background";
+  const rootClassName = embedded ? "relative bg-background" : "min-h-screen bg-background";
   const shellClassName = embedded ? "w-full pb-5" : "mx-auto max-w-md pb-24";
 
   const { data: posts, isLoading } = useQuery({
@@ -191,7 +191,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
         {isMember && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "fixed bottom-24 right-6" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
+              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "absolute bottom-4 right-4" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
                 <Plus className="h-6 w-6" />
               </Button>
             </DialogTrigger>
