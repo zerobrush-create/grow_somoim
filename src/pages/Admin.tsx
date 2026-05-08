@@ -92,7 +92,7 @@ const adminLabels = {
     grant: "부여",
     revoke: "해제",
     noRoles: "역할 데이터가 없어요",
-    userSearchPlaceholder: "닉네임·이메일·이름 검색 (2자 이상)",
+    userSearchPlaceholder: "닉네임·이메일·이름·UUID 검색 (2자 이상)",
     groupsHidden: "모임 숨김",
     groupsVisible: "모임 공개",
     profile: "프로필",
@@ -233,7 +233,7 @@ const adminLabels = {
     grant: "Grant",
     revoke: "Revoke",
     noRoles: "No role data",
-    userSearchPlaceholder: "Search nickname, email, or name (2+ chars)",
+    userSearchPlaceholder: "Search nickname, email, name, or UUID (2+ chars)",
     groupsHidden: "Groups hidden",
     groupsVisible: "Groups visible",
     profile: "Profile",
@@ -374,7 +374,7 @@ const adminLabels = {
     grant: "付与",
     revoke: "解除",
     noRoles: "権限データがありません",
-    userSearchPlaceholder: "ニックネーム・メール・名前で検索（2文字以上）",
+    userSearchPlaceholder: "ニックネーム・メール・名前・UUIDで検索（2文字以上）",
     groupsHidden: "グループ非表示",
     groupsVisible: "グループ表示",
     profile: "プロフィール",
@@ -515,7 +515,7 @@ const adminLabels = {
     grant: "授予",
     revoke: "撤销",
     noRoles: "没有角色数据",
-    userSearchPlaceholder: "搜索昵称、邮箱或姓名（至少2字）",
+    userSearchPlaceholder: "搜索昵称、邮箱、姓名或 UUID（至少2字）",
     groupsHidden: "隐藏圈子",
     groupsVisible: "显示圈子",
     profile: "个人资料",
@@ -656,7 +656,7 @@ const adminLabels = {
     grant: "Назначить",
     revoke: "Отозвать",
     noRoles: "Нет данных ролей",
-    userSearchPlaceholder: "Поиск по нику, email или имени (2+ символа)",
+    userSearchPlaceholder: "Поиск по нику, email, имени или UUID (2+ символа)",
     groupsHidden: "Группы скрыты",
     groupsVisible: "Группы видны",
     profile: "Профиль",
@@ -888,16 +888,21 @@ const Admin = () => {
   const [grantRole, setGrantRole] = useState<"admin" | "instructor" | "member">("instructor");
 
   const [userSearch, setUserSearch] = useState("");
+  const isUuidSearch = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
   const { data: foundUsers } = useQuery({
     queryKey: ["admin-user-search", userSearch],
     enabled: !!isAdmin && userSearch.trim().length >= 2,
     queryFn: async () => {
-      const term = `%${userSearch.trim()}%`;
-      const { data } = await supabase
+      const rawTerm = userSearch.trim();
+      const baseQuery = supabase
         .from("users")
-        .select("id,email,first_name,last_name,nickname,profile_location,role,show_groups,created_at")
-        .or(`nickname.ilike.${term},email.ilike.${term},first_name.ilike.${term},last_name.ilike.${term}`)
-        .limit(20);
+        .select("id,email,first_name,last_name,nickname,profile_location,role,show_groups,created_at");
+      const { data } = isUuidSearch(rawTerm)
+        ? await baseQuery.eq("id", rawTerm).limit(1)
+        : await baseQuery
+          .or(`nickname.ilike.%${rawTerm}%,email.ilike.%${rawTerm}%,first_name.ilike.%${rawTerm}%,last_name.ilike.%${rawTerm}%`)
+          .limit(20);
       return data ?? [];
     },
   });
@@ -1445,9 +1450,9 @@ const Admin = () => {
                         {(u.nickname ?? u.first_name ?? u.email ?? "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{u.nickname ?? [u.first_name, u.last_name].filter(Boolean).join(" ") ?? "—"}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground/80 truncate">{a.col_id}: {u.id}</p>
+                        <p className="text-sm font-semibold truncate mt-0.5">{u.nickname ?? [u.first_name, u.last_name].filter(Boolean).join(" ") ?? "—"}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
-                        <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">{u.id}</p>
                         <div className="flex gap-1 mt-1">
                           <Badge variant="outline">{roleLabel(u.role)}</Badge>
                           <Badge variant={u.show_groups === false ? "secondary" : "outline"}>{u.show_groups === false ? a.groupsHidden : a.groupsVisible}</Badge>

@@ -47,7 +47,7 @@ export const useGroupMembers = (groupId?: string) => {
       (profiles ?? []).forEach((p) => {
         profileMap.set(p.id, {
           userId: p.id,
-          name: p.name || p.nickname || p.email || "사용자",
+          name: p.nickname || p.name || p.email || "사용자",
           email: p.email,
           avatarUrl: p.avatar_url,
         });
