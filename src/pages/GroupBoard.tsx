@@ -18,7 +18,8 @@ import { HashtagText } from "@/components/HashtagText";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText, formatDate, formatDateTime } from "@/i18n/format";
 
-type BoardFilter = "all" | "notice" | "review" | "greeting" | "free";
+type BoardFilter = "notice" | "review" | "greeting";
+type PostFilter = BoardFilter | "free";
 
 type Post = {
   id: number;
@@ -30,13 +31,12 @@ type Post = {
 };
 
 const BOARD_FILTERS: { id: BoardFilter; label: string }[] = [
-  { id: "all", label: "전체" },
   { id: "notice", label: "공지" },
   { id: "review", label: "모임후기" },
   { id: "greeting", label: "가입인사" },
 ];
 
-const getPostFilter = (post: Post): Exclude<BoardFilter, "all"> => {
+const getPostFilter = (post: Post): PostFilter => {
   const text = `${post.title} ${post.content}`.toLowerCase();
   if (post.is_pinned || /공지|필독|notice/.test(text)) return "notice";
   if (/모임후기|후기|리뷰|review/.test(text)) return "review";
@@ -54,7 +54,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   const qc = useQueryClient();
   const { lang } = useLanguage();
   const tr = (value?: string | null) => displayText(value, lang);
-  const [filter, setFilter] = useState<BoardFilter>("all");
+  const [filter, setFilter] = useState<BoardFilter>("notice");
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -123,7 +123,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
     onError: (e: Error) => toast({ title: tr("등록 실패"), description: e.message, variant: "destructive" }),
   });
 
-  const visiblePosts = (posts ?? []).filter((post) => filter === "all" || getPostFilter(post) === filter);
+  const visiblePosts = (posts ?? []).filter((post) => getPostFilter(post) === filter);
 
   return (
     <div className={rootClassName}>

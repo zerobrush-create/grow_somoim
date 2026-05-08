@@ -34,8 +34,9 @@ type EventRow = {
   max_attendees: number | null;
 };
 
-const GroupEvents = () => {
-  const { id } = useParams();
+const GroupEvents = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
+  const params = useParams();
+  const id = groupId ?? params.id;
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -150,10 +151,58 @@ const GroupEvents = () => {
   }
   const todayD = new Date();
   const isToday = (d: number) => todayD.getFullYear() === year && todayD.getMonth() === month && todayD.getDate() === d;
+  const rootClassName = embedded ? "bg-background" : "min-h-screen bg-background";
+  const shellClassName = embedded ? "w-full pb-0" : "mx-auto max-w-md pb-20";
+
+  const createEventDialog = user ? (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" aria-label={tr("일정 추가")}>
+          <Plus className="h-5 w-5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{tr("새 일정")}</DialogTitle>
+          <DialogDescription>{tr("모임 멤버에게 공유할 일정을 만들어요.")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="t">{tr("제목")} *</Label>
+            <Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="s">{tr("시작 일시")} *</Label>
+            <Input id="s" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="l">{tr("장소")}</Label>
+            <Input id="l" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="m">{tr("정원")}</Label>
+            <Input id="m" inputMode="numeric" value={maxAttendees}
+              onChange={(e) => setMaxAttendees(e.target.value.replace(/[^0-9]/g, ""))} placeholder={tr("제한 없음")} maxLength={4} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="d">{tr("설명")}</Label>
+            <Textarea id="d" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>{tr("취소")}</Button>
+          <Button onClick={() => create.mutate()} disabled={create.isPending}>
+            {create.isPending ? tr("생성 중...") : tr("만들기")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-md pb-20">
+    <div className={rootClassName}>
+      <div className={shellClassName}>
+        {!embedded ? (
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={tr("뒤로")}>
             <ArrowLeft className="h-5 w-5" />
@@ -163,54 +212,20 @@ const GroupEvents = () => {
             <button onClick={() => setView("list")} className={cn("p-1.5 rounded-full", view === "list" && "bg-background shadow-sm")} aria-label={tr("목록")}><List className="h-4 w-4" /></button>
             <button onClick={() => setView("calendar")} className={cn("p-1.5 rounded-full", view === "calendar" && "bg-background shadow-sm")} aria-label={tr("내 캘린더")}><CalendarDays className="h-4 w-4" /></button>
           </div>
-          {user && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button size="icon" variant="ghost" aria-label="일정 추가">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{tr("새 일정")}</DialogTitle>
-                  <DialogDescription>{tr("모임 멤버에게 공유할 일정을 만들어요.")}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="t">{tr("제목")} *</Label>
-                    <Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="s">{tr("시작 일시")} *</Label>
-                    <Input id="s" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="l">{tr("장소")}</Label>
-                    <Input id="l" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="m">{tr("정원")}</Label>
-                    <Input id="m" inputMode="numeric" value={maxAttendees}
-                      onChange={(e) => setMaxAttendees(e.target.value.replace(/[^0-9]/g, ""))} placeholder={tr("제한 없음")} maxLength={4} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="d">{tr("설명")}</Label>
-                    <Textarea id="d" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpen(false)}>{tr("취소")}</Button>
-                  <Button onClick={() => create.mutate()} disabled={create.isPending}>
-                    {create.isPending ? tr("생성 중...") : tr("만들기")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+          {createEventDialog}
         </header>
+        ) : (
+          <div className="mb-3 flex items-center justify-end gap-2">
+            <div className="flex bg-muted rounded-full p-0.5">
+              <button onClick={() => setView("list")} className={cn("p-1.5 rounded-full", view === "list" && "bg-background shadow-sm")} aria-label={tr("목록")}><List className="h-4 w-4" /></button>
+              <button onClick={() => setView("calendar")} className={cn("p-1.5 rounded-full", view === "calendar" && "bg-background shadow-sm")} aria-label={tr("내 캘린더")}><CalendarDays className="h-4 w-4" /></button>
+            </div>
+            {createEventDialog}
+          </div>
+        )}
 
         {view === "calendar" && (
-          <div className="px-4 py-4">
+          <div className={cn(embedded ? "py-2" : "px-4 py-4")}>
             <div className="flex items-center justify-between mb-3">
               <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="px-2 py-1 rounded hover:bg-muted text-sm">‹</button>
               <p className="font-bold">{formatMonthTitle(year, month, lang)}</p>
@@ -236,7 +251,7 @@ const GroupEvents = () => {
         )}
 
         {view === "list" && (
-        <div className="px-4 py-4 space-y-3">
+        <div className={cn("space-y-3", embedded ? "py-2" : "px-4 py-4")}>
           {isLoading ? (
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : events && events.length > 0 ? (

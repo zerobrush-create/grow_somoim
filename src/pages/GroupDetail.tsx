@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, CalendarDays, Zap } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ import { displayText } from "@/i18n/format";
 import { shareOrCopyLink } from "@/lib/shareLink";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
+import GroupEvents from "./GroupEvents";
 
 type Tab = "intro" | "board" | "photos" | "meetups" | "flash" | "chat";
 
@@ -271,10 +272,8 @@ const GroupDetail = () => {
             </div>
           )}
           {activeTab === "meetups" && (
-            <div className="px-4 py-6 text-center">
-              <CalendarDays className="h-10 w-10 mx-auto mb-2 opacity-40 text-primary" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.eventsDesc}</p>
-              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>{t.groupDetail.viewEvents}</Button>
+            <div className="px-4 py-4">
+              <GroupEvents embedded groupId={group.id} />
             </div>
           )}
           {activeTab === "flash" && (
