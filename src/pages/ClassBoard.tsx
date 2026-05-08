@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
+const isNewPost = (createdAt: string) => Date.now() - new Date(createdAt).getTime() < 24 * 60 * 60 * 1000;
+
 const ClassBoard = () => {
   const { id } = useParams();
   const classId = Number(id);
@@ -121,7 +123,14 @@ const ClassBoard = () => {
               <div className="flex items-start gap-2">
                 {p.is_pinned && <Pin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold">{p.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold truncate">{p.title}</h3>
+                    {isNewPost(p.created_at) && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-extrabold text-accent">
+                        NEW
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(p.created_at).toLocaleDateString()}</p>
                 </div>
                 {isInstructor && <button onClick={() => togglePin.mutate({ postId: p.id, pinned: p.is_pinned })} className="p-1 text-muted-foreground hover:text-primary"><Pin className="h-4 w-4" /></button>}

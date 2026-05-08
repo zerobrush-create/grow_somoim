@@ -44,6 +44,8 @@ const getPostFilter = (post: Post): Exclude<BoardFilter, "all"> => {
   return "free";
 };
 
+const isNewPost = (createdAt: string) => Date.now() - new Date(createdAt).getTime() < 24 * 60 * 60 * 1000;
+
 const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
   const params = useParams();
   const id = groupId ?? params.id;
@@ -164,6 +166,11 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
                   <div className="flex items-center gap-2 mb-1.5">
                     {p.is_pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
                     <span className="text-sm font-bold flex-1 truncate">{tr(p.title)}</span>
+                    {isNewPost(p.created_at) && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-extrabold text-accent">
+                        NEW
+                      </span>
+                    )}
                     {filterLabel && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{tr(filterLabel)}</span>}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{tr(p.content)}</p>
