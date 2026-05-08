@@ -19,6 +19,7 @@ import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
+import { shareOrCopyLink } from "@/lib/shareLink";
 
 type Message = {
   id: number;
@@ -260,20 +261,16 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
 
   const shareInvite = async () => {
     const url = `${window.location.origin}/groups/${id}`;
-    try {
-      if (navigator.share && group) {
-        await navigator.share({
-          title: group.name,
-          text: "모임 링크를 공유해서 멤버를 초대해 보세요",
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-      }
+    const result = await shareOrCopyLink({
+      title: group?.name,
+      text: "모임 링크를 공유해서 멤버를 초대해 보세요",
+      url,
+    });
+
+    if (result.ok) {
       toast({ title: "초대 링크를 복사했어요" });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      toast({ title: "초대 링크를 복사하지 못했어요", variant: "destructive" });
+    } else if (result.action !== "cancelled") {
+      toast({ title: "초대 링크를 복사하지 못했어요", description: url, variant: "destructive" });
     }
   };
 

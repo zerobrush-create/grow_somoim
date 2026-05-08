@@ -14,6 +14,7 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText } from "@/i18n/format";
+import { shareOrCopyLink } from "@/lib/shareLink";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
 
@@ -101,20 +102,16 @@ const GroupDetail = () => {
 
   const shareInvite = async () => {
     const url = `${window.location.origin}/groups/${group?.id ?? id}`;
-    try {
-      if (navigator.share && group) {
-        await navigator.share({
-          title: group.name,
-          text: t.groupDetail.inviteShareText,
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-      }
+    const result = await shareOrCopyLink({
+      title: group?.name,
+      text: t.groupDetail.inviteShareText,
+      url,
+    });
+
+    if (result.ok) {
       toast({ title: t.groupDetail.inviteCopied });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      toast({ title: t.groupDetail.inviteFail, variant: "destructive" });
+    } else if (result.action !== "cancelled") {
+      toast({ title: t.groupDetail.inviteFail, description: url, variant: "destructive" });
     }
   };
 

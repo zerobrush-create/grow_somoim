@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/grow-logo.png";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { displayText as translateDisplayText } from "@/i18n/format";
+import { copyTextToClipboard } from "@/lib/shareLink";
 
 const Profile = () => {
   const { user, loading, signOut } = useAuth();
@@ -96,14 +97,14 @@ const Profile = () => {
 
   const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
 
-  const copyReferralCode = () => {
-    navigator.clipboard.writeText(referralCode).catch(() => {});
+  const copyReferralCode = async () => {
+    await copyTextToClipboard(referralCode);
     setCopied("code");
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const copyReferralLink = () => {
-    navigator.clipboard.writeText(referralLink).catch(() => {});
+  const copyReferralLink = async () => {
+    await copyTextToClipboard(referralLink);
     setCopied("link");
     setTimeout(() => setCopied(null), 2000);
   };
