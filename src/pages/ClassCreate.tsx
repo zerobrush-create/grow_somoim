@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Language } from "@/i18n/translations";
+import { normalizeClassCategory } from "@/lib/classCategories";
 
 const TEXT: Record<Language, {
   title: string;
@@ -160,7 +161,7 @@ const ClassCreate = () => {
       const { data, error } = await supabase.from("classes").insert({
         instructor_id: user.id,
         title: form.title.trim(),
-        category: form.category || null,
+        category: normalizeClassCategory(form.category, form.title),
         description: form.description || null,
         location: form.location || null,
         price: form.price || "무료",

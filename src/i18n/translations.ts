@@ -68,7 +68,7 @@ export const translations = {
     classes: {
       subtitle: "새로운 취미를 배워보세요", searchPlaceholder: "클래스 검색", create: "클래스 개설",
       priceAll: "전체", priceFree: "무료", pricePaid: "유료", empty: "아직 등록된 클래스가 없어요", free: "무료",
-      catAll: "전체", catCraft: "공예", catCooking: "쿠킹", catYoga: "요가", catPhoto: "사진", catReading: "독서", catOutdoor: "아웃도어",
+      catAll: "전체", catCraft: "공예", catCooking: "쿠킹", catYoga: "요가", catPhoto: "사진", catReading: "독서", catOutdoor: "아웃도어", catOther: "기타",
     },
     home: {
       myLocation: "내 위치", searchPlaceholder: "모임, 클래스, 친구를 검색해보세요",
@@ -243,7 +243,7 @@ export const translations = {
     classes: {
       subtitle: "Learn a new hobby", searchPlaceholder: "Search classes", create: "Create class",
       priceAll: "All", priceFree: "Free", pricePaid: "Paid", empty: "No classes registered yet", free: "Free",
-      catAll: "All", catCraft: "Craft", catCooking: "Cooking", catYoga: "Yoga", catPhoto: "Photo", catReading: "Reading", catOutdoor: "Outdoor",
+      catAll: "All", catCraft: "Craft", catCooking: "Cooking", catYoga: "Yoga", catPhoto: "Photo", catReading: "Reading", catOutdoor: "Outdoor", catOther: "Other",
     },
     home: {
       myLocation: "My Location", searchPlaceholder: "Search groups, classes, friends",
@@ -418,7 +418,7 @@ export const translations = {
     classes: {
       subtitle: "新しい趣味を始めよう", searchPlaceholder: "クラスを検索", create: "クラスを開設",
       priceAll: "全て", priceFree: "無料", pricePaid: "有料", empty: "まだクラスがありません", free: "無料",
-      catAll: "全て", catCraft: "工芸", catCooking: "料理", catYoga: "ヨガ", catPhoto: "写真", catReading: "読書", catOutdoor: "アウトドア",
+      catAll: "全て", catCraft: "工芸", catCooking: "料理", catYoga: "ヨガ", catPhoto: "写真", catReading: "読書", catOutdoor: "アウトドア", catOther: "その他",
     },
     home: {
       myLocation: "現在地", searchPlaceholder: "グループ・クラス・友達を検索",
@@ -593,7 +593,7 @@ export const translations = {
     classes: {
       subtitle: "学习新爱好", searchPlaceholder: "搜索课程", create: "开设课程",
       priceAll: "全部", priceFree: "免费", pricePaid: "付费", empty: "暂无课程", free: "免费",
-      catAll: "全部", catCraft: "手工", catCooking: "烹饪", catYoga: "瑜伽", catPhoto: "摄影", catReading: "阅读", catOutdoor: "户外",
+      catAll: "全部", catCraft: "手工", catCooking: "烹饪", catYoga: "瑜伽", catPhoto: "摄影", catReading: "阅读", catOutdoor: "户外", catOther: "其他",
     },
     home: {
       myLocation: "我的位置", searchPlaceholder: "搜索圈子、课程、朋友",
@@ -768,7 +768,7 @@ export const translations = {
     classes: {
       subtitle: "Освойте новое хобби", searchPlaceholder: "Поиск занятий", create: "Создать занятие",
       priceAll: "Все", priceFree: "Бесплатно", pricePaid: "Платно", empty: "Занятий пока нет", free: "Бесплатно",
-      catAll: "Все", catCraft: "Рукоделие", catCooking: "Кулинария", catYoga: "Йога", catPhoto: "Фото", catReading: "Чтение", catOutdoor: "Аутдор",
+      catAll: "Все", catCraft: "Рукоделие", catCooking: "Кулинария", catYoga: "Йога", catPhoto: "Фото", catReading: "Чтение", catOutdoor: "Аутдор", catOther: "Другое",
     },
     home: {
       myLocation: "Моё место", searchPlaceholder: "Поиск групп, занятий, друзей",

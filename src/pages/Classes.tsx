@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText } from "@/i18n/format";
+import { normalizeClassCategory } from "@/lib/classCategories";
 
 type SortKey = "recent" | "popular" | "rating";
 
@@ -34,6 +35,7 @@ const Classes = () => {
     { id: "사진", label: t.classes.catPhoto },
     { id: "독서", label: t.classes.catReading },
     { id: "아웃도어", label: t.classes.catOutdoor },
+    { id: "기타", label: t.classes.catOther },
   ];
 
   const PRICE_FILTERS = [
@@ -49,10 +51,9 @@ const Classes = () => {
   ];
 
   const { data: list, isLoading } = useQuery({
-    queryKey: ["classes", active],
+    queryKey: ["classes"],
     queryFn: async () => {
       let q = supabase.from("classes").select("id,title,category,price,image_url,location,instructor_id").order("created_at", { ascending: false }).limit(60);
-      if (active !== "전체") q = q.eq("category", active);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -98,6 +99,7 @@ const Classes = () => {
   });
 
   const filtered = (list ?? []).filter((c) => {
+    if (active !== "전체" && normalizeClassCategory(c.category, c.title) !== active) return false;
     if (price === "무료" && (c.price ?? "").trim() && c.price !== "무료" && !(c.price ?? "").startsWith("0")) return false;
     if (price === "유료" && (!c.price || c.price === "무료" || (c.price ?? "").startsWith("0"))) return false;
     if (query.trim()) {
