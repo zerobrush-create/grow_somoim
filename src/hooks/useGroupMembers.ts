@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
 
 export type GroupMember = {
   userId: string;
@@ -35,21 +36,22 @@ export const useGroupMembers = (groupId?: string) => {
       const profileMap = new Map<string, Omit<GroupMember, "role" | "joinedAt">>();
 
       (appUsers ?? []).forEach((u) => {
-        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+        const appFullName = fullName(u.first_name, u.last_name);
         profileMap.set(u.id, {
           userId: u.id,
-          name: u.nickname || fullName || u.email || "사용자",
-          email: u.email,
-          avatarUrl: u.profile_image_url,
+          name: firstText(u.nickname, appFullName, u.email, fallbackUserName(u.id)),
+          email: u.email ?? null,
+          avatarUrl: u.profile_image_url ?? null,
         });
       });
 
       (profiles ?? []).forEach((p) => {
+        const existing = profileMap.get(p.id);
         profileMap.set(p.id, {
           userId: p.id,
-          name: p.nickname || p.name || p.email || "사용자",
-          email: p.email,
-          avatarUrl: p.avatar_url,
+          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          email: p.email ?? existing?.email ?? null,
+          avatarUrl: p.avatar_url ?? existing?.avatarUrl ?? null,
         });
       });
 
@@ -59,7 +61,7 @@ export const useGroupMembers = (groupId?: string) => {
           userId: m.user_id,
           role: m.role,
           joinedAt: m.joined_at,
-          name: profile?.name ?? "사용자",
+          name: profile?.name ?? fallbackUserName(m.user_id),
           email: profile?.email ?? null,
           avatarUrl: profile?.avatarUrl ?? null,
         };

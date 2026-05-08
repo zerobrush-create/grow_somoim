@@ -14,6 +14,7 @@ import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
+import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
 
 type Msg = { id: number; content: string; sender_id: string; created_at: string };
 
@@ -24,7 +25,7 @@ type SenderProfile = {
   email: string | null;
 };
 
-const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || "사용자";
+const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || fallbackUserName(sender?.id);
 const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
 
 const ClassChat = () => {
@@ -73,20 +74,21 @@ const ClassChat = () => {
       ]);
       const map = new Map<string, SenderProfile>();
       (appUsers ?? []).forEach((u) => {
-        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+        const appFullName = fullName(u.first_name, u.last_name);
         map.set(u.id, {
           id: u.id,
-          name: u.nickname || fullName || null,
-          avatar_url: u.profile_image_url,
-          email: u.email,
+          name: firstText(u.nickname, appFullName, u.email, fallbackUserName(u.id)),
+          avatar_url: u.profile_image_url ?? null,
+          email: u.email ?? null,
         });
       });
       (profiles ?? []).forEach((p) => {
+        const existing = map.get(p.id);
         map.set(p.id, {
           id: p.id,
-          name: p.name || p.nickname || null,
-          avatar_url: p.avatar_url,
-          email: p.email,
+          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          avatar_url: p.avatar_url ?? existing?.avatar_url ?? null,
+          email: p.email ?? existing?.email ?? null,
         });
       });
       return map;

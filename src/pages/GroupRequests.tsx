@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
 
 type Request = {
   id: number;
   user_id: string;
   status: string;
   joined_at: string | null;
-  profile?: { name: string | null; avatar_url: string | null; email: string | null } | null;
+  profile?: { name: string; avatar_url: string | null; email: string | null } | null;
 };
 
 const GroupRequests = () => {
@@ -48,10 +49,41 @@ const GroupRequests = () => {
       if (userIds.length === 0) return [];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id,name,avatar_url,email")
+        .select("id,name,nickname,avatar_url,email")
         .in("id", userIds);
-      const map = new Map((profiles ?? []).map((p) => [p.id, p]));
-      return (rows ?? []).map((r) => ({ ...r, profile: map.get(r.user_id) ?? null }));
+      const { data: appUsers } = await supabase
+        .from("users")
+        .select("id,nickname,email,first_name,last_name,profile_image_url")
+        .in("id", userIds);
+
+      const map = new Map<string, { name: string; avatar_url: string | null; email: string | null }>();
+
+      (appUsers ?? []).forEach((u) => {
+        const name = firstText(u.nickname, fullName(u.first_name, u.last_name), u.email, fallbackUserName(u.id));
+        map.set(u.id, {
+          name,
+          avatar_url: u.profile_image_url ?? null,
+          email: u.email ?? null,
+        });
+      });
+
+      (profiles ?? []).forEach((p) => {
+        const existing = map.get(p.id);
+        map.set(p.id, {
+          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          avatar_url: p.avatar_url ?? existing?.avatar_url ?? null,
+          email: p.email ?? existing?.email ?? null,
+        });
+      });
+
+      return (rows ?? []).map((r) => ({
+        ...r,
+        profile: map.get(r.user_id) ?? {
+          name: fallbackUserName(r.user_id),
+          avatar_url: null,
+          email: null,
+        },
+      }));
     },
   });
 
@@ -109,10 +141,13 @@ const GroupRequests = () => {
               <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-border">
                 <Avatar className="h-11 w-11">
                   <AvatarImage src={r.profile?.avatar_url ?? undefined} />
-                  <AvatarFallback>{(r.profile?.name ?? r.profile?.email ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{(r.profile?.name ?? r.profile?.email ?? r.user_id).slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{r.profile?.name ?? r.profile?.email ?? "알 수 없음"}</p>
+                  <p className="text-sm font-semibold truncate">{r.profile?.name ?? fallbackUserName(r.user_id)}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {r.profile?.email ? `${r.profile.email} · ` : ""}ID {r.user_id}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {r.joined_at ? new Date(r.joined_at).toLocaleDateString("ko-KR") : ""}
                   </p>

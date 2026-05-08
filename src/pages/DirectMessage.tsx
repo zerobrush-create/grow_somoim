@@ -17,6 +17,7 @@ import { useMessageTranslation } from "@/hooks/useMessageTranslation";
 import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubble";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
+import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
 
 type DM = { id: number; content: string; sender_id: string; receiver_id: string; created_at: string; is_read: boolean };
 
@@ -27,7 +28,7 @@ type ChatProfile = {
   email: string | null;
 };
 
-const profileName = (profile?: ChatProfile | null) => profile?.name || profile?.email || "사용자";
+const profileName = (profile?: ChatProfile | null) => profile?.name || profile?.email || fallbackUserName(profile?.id);
 const profileInitial = (profile?: ChatProfile | null) => profileName(profile).trim().slice(0, 1).toUpperCase();
 
 const DirectMessage = () => {
@@ -64,21 +65,22 @@ const DirectMessage = () => {
       ]);
 
       if (profile) {
+        const appFullName = appUser ? fullName(appUser.first_name, appUser.last_name) : "";
         return {
           id: profile.id,
-          name: profile.name || profile.nickname || null,
-          avatar_url: profile.avatar_url,
-          email: profile.email,
+          name: firstText(profile.nickname, profile.name, appUser?.nickname, appFullName, profile.email, appUser?.email, fallbackUserName(profile.id)),
+          avatar_url: profile.avatar_url ?? appUser?.profile_image_url ?? null,
+          email: profile.email ?? appUser?.email ?? null,
         };
       }
 
       if (appUser) {
-        const fullName = [appUser.first_name, appUser.last_name].filter(Boolean).join(" ").trim();
+        const appFullName = fullName(appUser.first_name, appUser.last_name);
         return {
           id: appUser.id,
-          name: appUser.nickname || fullName || null,
-          avatar_url: appUser.profile_image_url,
-          email: appUser.email,
+          name: firstText(appUser.nickname, appFullName, appUser.email, fallbackUserName(appUser.id)),
+          avatar_url: appUser.profile_image_url ?? null,
+          email: appUser.email ?? null,
         };
       }
 
