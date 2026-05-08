@@ -18,7 +18,7 @@ import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubb
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
-import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
+import { firstText, fullName } from "@/lib/userIdentity";
 import { shareOrCopyLink } from "@/lib/shareLink";
 
 type Message = {
@@ -35,8 +35,12 @@ type SenderProfile = {
   email: string | null;
 };
 
-const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || fallbackUserName(sender?.id);
-const getSenderInitial = (sender?: SenderProfile) => getSenderName(sender).trim().slice(0, 1).toUpperCase();
+const ANONYMOUS_SENDER_NAME = "익명";
+const getSenderName = (sender?: SenderProfile) => sender?.name || sender?.email || ANONYMOUS_SENDER_NAME;
+const getSenderInitial = (sender?: SenderProfile) => {
+  const name = getSenderName(sender);
+  return name === ANONYMOUS_SENDER_NAME ? "?" : name.trim().slice(0, 1).toUpperCase();
+};
 const EMOJIS = ["😀", "😄", "😊", "😍", "🥰", "😂", "👍", "👏", "🙏", "💚", "🔥", "✨", "🎉", "🙌", "🤝", "😭", "😎", "🤔", "😮", "💪", "🌱", "📚", "🏃", "🎬"];
 
 const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
@@ -109,7 +113,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
         const appFullName = fullName(u.first_name, u.last_name);
         map.set(u.id, {
           id: u.id,
-          name: firstText(u.nickname, appFullName, u.email, fallbackUserName(u.id)),
+          name: firstText(u.nickname, appFullName, u.email),
           avatar_url: u.profile_image_url ?? null,
           email: u.email ?? null,
         });
@@ -118,7 +122,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
         const existing = map.get(p.id);
         map.set(p.id, {
           id: p.id,
-          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email),
           avatar_url: p.avatar_url ?? existing?.avatar_url ?? null,
           email: p.email ?? existing?.email ?? null,
         });
