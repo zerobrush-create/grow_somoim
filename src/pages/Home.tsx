@@ -192,8 +192,8 @@ const Home = () => {
               </p>
             </div>
           </div>
-          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full hover:bg-card transition-smooth" aria-label="알림">
-            <Bell className="h-5 w-5 text-foreground" />
+          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full border border-border/70 bg-background/85 text-foreground shadow-soft backdrop-blur hover:bg-card transition-smooth dark:bg-background/75 dark:text-white" aria-label={t.profile.notifications}>
+            <Bell className="h-5 w-5" />
             {!!unread && unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
           </button>
         </div>
