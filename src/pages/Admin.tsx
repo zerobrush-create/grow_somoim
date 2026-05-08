@@ -1077,11 +1077,24 @@ const Admin = () => {
       const { error } = await supabase.from("groups").update({ status }).eq("id", id);
       if (error) throw error;
     },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["admin-groups"] });
+      const previous = qc.getQueryData<any[]>(["admin-groups"]);
+      qc.setQueryData<any[]>(["admin-groups"], (current) =>
+        (current ?? []).map((group) => (group.id === id ? { ...group, status } : group))
+      );
+      return { previous };
+    },
     onSuccess: () => {
       toast({ title: a.groupStatusChanged });
-      qc.invalidateQueries({ queryKey: ["admin-groups"] });
+      void qc.invalidateQueries({ queryKey: ["home-hot"], refetchType: "inactive" });
+      void qc.invalidateQueries({ queryKey: ["home-groups"], refetchType: "inactive" });
+      void qc.invalidateQueries({ queryKey: ["groups"], refetchType: "inactive" });
     },
-    onError: (e: Error) => toast({ title: a.statusFailed, description: e.message, variant: "destructive" }),
+    onError: (e: Error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(["admin-groups"], context.previous);
+      toast({ title: a.statusFailed, description: e.message, variant: "destructive" });
+    },
   });
 
   const filteredGroups = useMemo(() => {
@@ -1109,11 +1122,23 @@ const Admin = () => {
       const { error } = await supabase.from("classes").update({ status }).eq("id", id);
       if (error) throw error;
     },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["admin-classes"] });
+      const previous = qc.getQueryData<any[]>(["admin-classes"]);
+      qc.setQueryData<any[]>(["admin-classes"], (current) =>
+        (current ?? []).map((klass) => (klass.id === id ? { ...klass, status } : klass))
+      );
+      return { previous };
+    },
     onSuccess: () => {
       toast({ title: a.classStatusChanged });
-      qc.invalidateQueries({ queryKey: ["admin-classes"] });
+      void qc.invalidateQueries({ queryKey: ["classes"], refetchType: "inactive" });
+      void qc.invalidateQueries({ queryKey: ["home-classes"], refetchType: "inactive" });
     },
-    onError: (e: Error) => toast({ title: a.statusFailed, description: e.message, variant: "destructive" }),
+    onError: (e: Error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(["admin-classes"], context.previous);
+      toast({ title: a.statusFailed, description: e.message, variant: "destructive" });
+    },
   });
 
   const saveClassNote = useMutation({
