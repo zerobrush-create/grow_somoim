@@ -122,7 +122,7 @@ const Profile = () => {
 
   return (
     <MobileShell>
-      <div>
+      <div key={lang} data-i18n-skip>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border flex items-center justify-between">
         <h1 className="text-xl font-bold">{t.profile.title}</h1>
         <div className="flex gap-1">
