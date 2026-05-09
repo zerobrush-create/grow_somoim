@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, Zap } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, Zap, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +14,7 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText } from "@/i18n/format";
-import { shareOrCopyLink } from "@/lib/shareLink";
+import { copyTextToClipboard, shareOrCopyLink } from "@/lib/shareLink";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
 import GroupEvents from "./GroupEvents";
@@ -101,15 +101,28 @@ const GroupDetail = () => {
     join.mutate();
   };
 
+  const getInviteUrl = () => `${window.location.origin}/groups/${group?.id ?? id}`;
+
+  const copyInviteLink = async () => {
+    const url = getInviteUrl();
+    const copied = await copyTextToClipboard(url);
+
+    if (copied) {
+      toast({ title: t.groupDetail.inviteCopied });
+    } else {
+      toast({ title: t.groupDetail.inviteFail, description: url, variant: "destructive" });
+    }
+  };
+
   const shareInvite = async () => {
-    const url = `${window.location.origin}/groups/${group?.id ?? id}`;
+    const url = getInviteUrl();
     const result = await shareOrCopyLink({
       title: group?.name,
       text: t.groupDetail.inviteShareText,
       url,
     });
 
-    if (result.ok) {
+    if (result.ok && result.action === "copied") {
       toast({ title: t.groupDetail.inviteCopied });
     } else if (result.action !== "cancelled") {
       toast({ title: t.groupDetail.inviteFail, description: url, variant: "destructive" });
@@ -200,6 +213,9 @@ const GroupDetail = () => {
               </button>
               <button onClick={shareInvite} className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="share">
                 <Share2 className="h-5 w-5" />
+              </button>
+              <button onClick={copyInviteLink} className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label={t.groupDetail.copyInviteLink}>
+                <Copy className="h-5 w-5" />
               </button>
             </div>
           </div>
