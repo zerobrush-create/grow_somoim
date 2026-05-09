@@ -168,6 +168,7 @@ const ClassCreate = () => {
         schedule: form.schedule || null,
         curriculum: form.curriculum || null,
         max_students: form.max_students,
+        status: "approved",
       }).select("id").single();
       if (error) throw error;
       return data;
