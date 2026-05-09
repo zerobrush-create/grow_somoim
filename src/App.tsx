@@ -30,6 +30,7 @@ const GroupPhotos = lazy(() => import("./pages/GroupPhotos.tsx"));
 const GroupAnnouncements = lazy(() => import("./pages/GroupAnnouncements.tsx"));
 const DirectMessage = lazy(() => import("./pages/DirectMessage.tsx"));
 const ClassCreate = lazy(() => import("./pages/ClassCreate.tsx"));
+const ClassEdit = lazy(() => import("./pages/ClassEdit.tsx"));
 const ClassChat = lazy(() => import("./pages/ClassChat.tsx"));
 const Classes = lazy(() => import("./pages/Classes.tsx"));
 const ClassDetail = lazy(() => import("./pages/ClassDetail.tsx"));
@@ -103,6 +104,7 @@ const App = () => (
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/classes" element={<Classes />} />
           <Route path="/classes/new" element={<ClassCreate />} />
+          <Route path="/classes/:id/edit" element={<ClassEdit />} />
           <Route path="/classes/:id/chat" element={<ClassChat />} />
           <Route path="/classes/:id/board" element={<ClassBoard />} />
           <Route path="/classes/:id" element={<ClassDetail />} />

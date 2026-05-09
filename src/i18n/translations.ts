@@ -137,6 +137,7 @@ export const translations = {
       manageStudents: "수강생 관리", manageStudentsDesc: "신청자를 승인하거나 수강생을 관리하세요.",
       noStudents: "아직 수강 신청이 없어요", approve: "승인", reject: "거절", remove: "내보내기",
       waitingApproval: "강사 승인 후 입장할 수 있어요", chatLocked: "승인된 수강생만 채팅과 게시판을 이용할 수 있어요",
+      editClass: "클래스 수정",
     },
     profileEdit: {
       title: "프로필 편집", name: "이름", bio: "자기소개",
@@ -323,6 +324,7 @@ export const translations = {
       manageStudents: "Manage Students", manageStudentsDesc: "Approve applicants or manage enrolled students.",
       noStudents: "No enrollment requests yet", approve: "Approve", reject: "Reject", remove: "Remove",
       waitingApproval: "You can enter after instructor approval", chatLocked: "Only approved students can use chat and board",
+      editClass: "Edit class",
     },
     profileEdit: {
       title: "Edit Profile", name: "Name", bio: "Bio",
@@ -509,6 +511,7 @@ export const translations = {
       manageStudents: "受講生管理", manageStudentsDesc: "申請者の承認や受講生の管理を行います。",
       noStudents: "まだ受講申請がありません", approve: "承認", reject: "却下", remove: "削除",
       waitingApproval: "講師の承認後に入室できます", chatLocked: "承認済みの受講生のみチャットと掲示板を利用できます",
+      editClass: "クラス編集",
     },
     profileEdit: {
       title: "プロフィール編集", name: "名前", bio: "自己紹介",
@@ -695,6 +698,7 @@ export const translations = {
       manageStudents: "学员管理", manageStudentsDesc: "批准申请者或管理已报名学员。",
       noStudents: "暂无报名申请", approve: "批准", reject: "拒绝", remove: "移除",
       waitingApproval: "讲师批准后即可进入", chatLocked: "只有已批准的学员可以使用聊天和公告板",
+      editClass: "编辑课程",
     },
     profileEdit: {
       title: "编辑资料", name: "姓名", bio: "个人简介",
@@ -881,6 +885,7 @@ export const translations = {
       manageStudents: "Управление участниками", manageStudentsDesc: "Одобряйте заявки и управляйте участниками.",
       noStudents: "Заявок пока нет", approve: "Одобрить", reject: "Отклонить", remove: "Удалить",
       waitingApproval: "Войти можно после одобрения инструктора", chatLocked: "Чат и доска доступны только одобренным участникам",
+      editClass: "Редактировать занятие",
     },
     profileEdit: {
       title: "Редактировать профиль", name: "Имя", bio: "О себе",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle, Heart, Users, UserCheck, UserX, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle, Heart, Users, UserCheck, UserX, Trash2, Pencil } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -243,6 +243,11 @@ const ClassDetail = () => {
           <button onClick={() => user ? toggleBookmark.mutate() : navigate("/login")} className="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label="bookmark">
             <Heart className={cn("h-5 w-5", bookmark && "fill-accent text-accent")} />
           </button>
+          {isInstructor && (
+            <button onClick={() => navigate(`/classes/${cls.id}/edit`)} className="absolute top-3 right-16 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center" aria-label={t.classDetail.editClass}>
+              <Pencil className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <div className="px-4 pt-5">
