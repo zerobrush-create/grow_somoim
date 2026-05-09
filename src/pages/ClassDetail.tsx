@@ -270,7 +270,7 @@ const ClassDetail = () => {
             <Avatar className="h-8 w-8"><AvatarImage src={instructor?.avatar_url ?? undefined} /><AvatarFallback><User className="h-4 w-4" /></AvatarFallback></Avatar>
             <div>
               <p className="text-xs text-muted-foreground">{t.classDetail.instructor}</p>
-              <p className="text-sm font-semibold">{instructor?.name ?? instructor?.email ?? t.classDetail.instructor}</p>
+              <p className="text-sm font-semibold">{tr(instructor?.name) || instructor?.email || t.classDetail.instructor}</p>
             </div>
             {isInstructor && (
               <Button type="button" variant="outline" size="sm" className="ml-auto h-9 rounded-full" onClick={() => setStudentsOpen(true)}>
