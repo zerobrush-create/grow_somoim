@@ -42,6 +42,14 @@ const ClassDetail = () => {
   const qc = useQueryClient();
   const { lang, t } = useLanguage();
   const tr = (value?: string | null) => displayText(value, lang);
+  const classStatusLabel = (value?: string | null) => {
+    const status = (value ?? "").trim().toLowerCase();
+    if (status === "pending") return t.classDetail.pending;
+    if (status === "approved") return t.classDetail.approved;
+    if (status === "rejected") return t.classDetail.rejected;
+    if (status === "active") return t.groupDetail.active;
+    return tr(value);
+  };
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
@@ -284,7 +292,7 @@ const ClassDetail = () => {
         <div className="mx-4 mt-4 bg-primary-soft rounded-2xl p-4 grid grid-cols-3 divide-x divide-primary/10">
           <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.fee}</p><p className="text-base font-bold text-primary mt-0.5">{tr(cls.price) || t.classDetail.free}</p></div>
           <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.students}</p><p className="text-base font-bold text-primary mt-0.5">{enrollCount}/{cls.max_students ?? "∞"}</p></div>
-          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.status}</p><p className="text-base font-bold text-primary mt-0.5">{tr(cls.status)}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.status}</p><p className="text-base font-bold text-primary mt-0.5">{classStatusLabel(cls.status)}</p></div>
         </div>
 
         <div className="flex border-b border-border mt-5">
