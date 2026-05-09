@@ -40,6 +40,7 @@ const Home = () => {
   const { t } = useLanguage();
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [quickExpanded, setQuickExpanded] = useState(false);
+  const [categoryExpanded, setCategoryExpanded] = useState(false);
 
   const { data: banners } = useQuery({
     queryKey: ["banners-active"],
@@ -187,6 +188,7 @@ const Home = () => {
 
   const getCatLabel = (id: string) =>
     t.categories[id as keyof typeof t.categories] ?? id;
+  const visibleCategories = categoryExpanded ? categories : categories.slice(0, 8);
 
   return (
     <MobileShell>
@@ -241,8 +243,22 @@ const Home = () => {
       </section>
 
       <section className="px-4 pt-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold text-muted-foreground">{t.home.categoryMenu}</h3>
+          {categories.length > 8 && (
+            <button
+              type="button"
+              onClick={() => setCategoryExpanded((value) => !value)}
+              className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary transition-smooth hover:bg-primary hover:text-primary-foreground"
+              aria-expanded={categoryExpanded}
+            >
+              {categoryExpanded ? t.home.quickCollapse : t.home.quickMore}
+              {categoryExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-4 gap-3 [@media_(min-width:600px)]:grid-cols-8">
-          {categories.slice(0, 8).map((c) => (
+          {visibleCategories.map((c) => (
             <Link key={c.id} to="/groups" className="flex flex-col items-center gap-1.5 group">
               <div className="h-14 w-14 rounded-2xl bg-primary-soft flex items-center justify-center text-2xl transition-smooth group-hover:scale-105 group-hover:shadow-soft">{c.emoji}</div>
               <span className="text-xs font-medium text-foreground">{getCatLabel(c.id)}</span>

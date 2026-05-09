@@ -14,8 +14,10 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateRuntimeText } from "@/i18n/runtimeTranslations";
+import { categories as groupCategories } from "@/data/mock";
 
-const CATEGORIES = ["운동", "스터디", "취미", "맛집", "여행", "음악", "반려동물"];
+const CATEGORIES = groupCategories.filter((category) => category.id !== "all");
+const CATEGORY_LABELS = CATEGORIES.map((category) => category.label);
 const MAX_TAGS = 5;
 const MAX_IMAGE_MB = 5;
 
@@ -25,7 +27,7 @@ const groupSchema = z.object({
     .trim()
     .min(2, { message: "모임 이름은 2자 이상이어야 해요" })
     .max(40, { message: "모임 이름은 40자 이하로 입력해 주세요" }),
-  category: z.enum(CATEGORIES as [string, ...string[]], {
+  category: z.enum(CATEGORY_LABELS as [string, ...string[]], {
     errorMap: () => ({ message: "카테고리를 선택해 주세요" }),
   }),
   location: z
@@ -318,21 +320,22 @@ const GroupCreate = () => {
               {CATEGORIES.map((c) => (
                 <button
                   type="button"
-                  key={c}
+                  key={c.id}
                   onClick={() => {
-                    setCategory(c);
+                    setCategory(c.label);
                     markTouched("category");
                   }}
                   className={cn(
                     "px-3 py-1.5 rounded-full text-sm font-medium transition-smooth",
-                    category === c
+                    category === c.label
                       ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
                       : "bg-muted text-foreground hover:bg-secondary",
                     !category && (touched.category || submitAttempted) && "ring-1 ring-destructive/40"
                   )}
-                  aria-pressed={category === c}
+                  aria-pressed={category === c.label}
                 >
-                  {c}
+                  <span className="mr-1">{c.emoji}</span>
+                  {tr(c.label)}
                 </button>
               ))}
             </div>

@@ -39,6 +39,10 @@ const categoryMap: Record<string, string> = {
   social: "친목",
   cooking: "요리",
   craft: "공예",
+  beauty: "뷰티",
+  dance: "댄스",
+  meditation: "명상",
+  writing: "글쓰기",
 };
 
 export const mapCategoryFilter = (id: string) => categoryMap[id];

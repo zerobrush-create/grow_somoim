@@ -64,6 +64,10 @@ export const categories = [
   { id: "social", label: "친목", emoji: "🥂" },
   { id: "cooking", label: "요리", emoji: "🍳" },
   { id: "craft", label: "공예", emoji: "🧶" },
+  { id: "beauty", label: "뷰티", emoji: "💄" },
+  { id: "dance", label: "댄스", emoji: "💃" },
+  { id: "meditation", label: "명상", emoji: "🪷" },
+  { id: "writing", label: "글쓰기", emoji: "✍️" },
 ];
 
 export const groups: Group[] = [
