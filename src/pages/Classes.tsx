@@ -15,6 +15,30 @@ import { normalizeClassCategory } from "@/lib/classCategories";
 
 type SortKey = "recent" | "popular" | "rating";
 
+const priceText = (value: unknown) => (value == null ? "" : String(value).trim());
+
+const priceNumber = (value: unknown) => {
+  const raw = priceText(value).replace(/[^\d.-]/g, "");
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isFreePrice = (value: unknown) => {
+  const raw = priceText(value).toLowerCase();
+  if (!raw) return true;
+  if (raw === "무료" || raw === "free") return true;
+  const amount = priceNumber(raw);
+  return amount === 0;
+};
+
+const formatClassPrice = (value: unknown, freeLabel: string, translate: (value?: string | null) => string) => {
+  const raw = priceText(value);
+  if (isFreePrice(raw)) return freeLabel;
+  if (/[^\d,\s.-]/.test(raw)) return translate(raw);
+  const amount = priceNumber(raw);
+  return amount == null ? translate(raw) : `${amount.toLocaleString()}원`;
+};
+
 const Classes = () => {
   const [active, setActive] = useState("전체");
   const [query, setQuery] = useState("");
@@ -116,11 +140,12 @@ const Classes = () => {
 
   const filtered = (list ?? []).filter((c) => {
     if (active !== "전체" && normalizeClassCategory(c.category, c.title) !== active) return false;
-    if (price === "무료" && (c.price ?? "").trim() && c.price !== "무료" && !(c.price ?? "").startsWith("0")) return false;
-    if (price === "유료" && (!c.price || c.price === "무료" || (c.price ?? "").startsWith("0"))) return false;
+    const free = isFreePrice(c.price);
+    if (price === "무료" && !free) return false;
+    if (price === "유료" && free) return false;
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      const hay = `${c.title} ${c.category ?? ""} ${c.location ?? ""}`.toLowerCase();
+      const hay = [c.title, c.category, c.location].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -209,7 +234,7 @@ const Classes = () => {
           filtered.map((c) => (
             <Link key={c.id} to={`/classes/${c.id}`} className="bg-card rounded-2xl overflow-hidden shadow-soft transition-smooth hover:shadow-card hover:-translate-y-0.5">
               <div className="aspect-square overflow-hidden bg-muted flex items-center justify-center">
-                {c.image_url ? <img src={c.image_url} alt={c.title} loading="lazy" className="h-full w-full object-cover" /> : <BookOpen className="h-10 w-10 text-muted-foreground/30" />}
+                {c.image_url ? <img src={c.image_url} alt={c.title ?? t.nav.classes} loading="lazy" className="h-full w-full object-cover" /> : <BookOpen className="h-10 w-10 text-muted-foreground/30" />}
               </div>
               <div className="p-3">
                 {c.category && <p className="text-[10px] font-semibold text-primary">{tr(c.category)}</p>}
@@ -226,7 +251,7 @@ const Classes = () => {
                     <MapPin className="h-3 w-3" /> {tr(c.location)}
                   </p>
                 )}
-                <p className="text-sm font-bold mt-1.5">{tr(c.price) || t.classes.free}</p>
+                <p className="text-sm font-bold mt-1.5">{formatClassPrice(c.price, t.classes.free, tr)}</p>
               </div>
             </Link>
           ))
