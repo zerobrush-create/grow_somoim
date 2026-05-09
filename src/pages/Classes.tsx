@@ -36,7 +36,7 @@ const formatClassPrice = (value: unknown, freeLabel: string, translate: (value?:
   if (isFreePrice(raw)) return freeLabel;
   if (/[^\d,\s.-]/.test(raw)) return translate(raw);
   const amount = priceNumber(raw);
-  return amount == null ? translate(raw) : `${amount.toLocaleString()}원`;
+  return amount == null ? translate(raw) : translate(`${amount.toLocaleString("ko-KR")}원`);
 };
 
 const Classes = () => {

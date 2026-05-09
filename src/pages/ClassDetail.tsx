@@ -42,6 +42,14 @@ const ClassDetail = () => {
   const qc = useQueryClient();
   const { lang, t } = useLanguage();
   const tr = (value?: string | null) => displayText(value, lang);
+  const classPriceLabel = (value?: string | null) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return t.classDetail.free;
+    if (raw === "무료" || raw.toLowerCase() === "free") return t.classDetail.free;
+    const amount = Number(raw.replace(/[^\d.-]/g, ""));
+    if (Number.isFinite(amount)) return tr(`${amount.toLocaleString("ko-KR")}원`);
+    return tr(raw);
+  };
   const classStatusLabel = (value?: string | null) => {
     const status = (value ?? "").trim().toLowerCase();
     if (status === "pending") return t.classDetail.pending;
@@ -290,7 +298,7 @@ const ClassDetail = () => {
         </div>
 
         <div className="mx-4 mt-4 bg-primary-soft rounded-2xl p-4 grid grid-cols-3 divide-x divide-primary/10">
-          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.fee}</p><p className="text-base font-bold text-primary mt-0.5">{tr(cls.price) || t.classDetail.free}</p></div>
+          <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.fee}</p><p className="text-base font-bold text-primary mt-0.5">{classPriceLabel(cls.price)}</p></div>
           <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.students}</p><p className="text-base font-bold text-primary mt-0.5">{enrollCount}/{cls.max_students ?? "∞"}</p></div>
           <div className="text-center"><p className="text-xs text-muted-foreground">{t.classDetail.status}</p><p className="text-base font-bold text-primary mt-0.5">{classStatusLabel(cls.status)}</p></div>
         </div>
