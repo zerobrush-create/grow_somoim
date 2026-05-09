@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle, Heart } from "lucide-react";
+import { ArrowLeft, MapPin, Star, User, BookOpen, MessageCircle, Heart, Users, UserCheck, UserX, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,13 +9,30 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/ReportDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText, formatDate } from "@/i18n/format";
+import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
 
 type Tab = "intro" | "reviews";
+type EnrollmentStatus = "pending" | "approved" | "rejected";
+
+type StudentRow = {
+  id: number;
+  user_id: string;
+  status: EnrollmentStatus;
+  enrolled_at: string;
+};
+
+type StudentProfile = {
+  id: string;
+  name: string;
+  email: string | null;
+  avatar_url: string | null;
+};
 
 const ClassDetail = () => {
   const { id } = useParams();
@@ -28,6 +45,7 @@ const ClassDetail = () => {
   const [activeTab, setActiveTab] = useState<Tab>("intro");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
+  const [studentsOpen, setStudentsOpen] = useState(false);
 
   const { data: cls, isLoading } = useQuery({
     queryKey: ["class", idNum],
@@ -44,13 +62,13 @@ const ClassDetail = () => {
   const { data: enrollment } = useQuery({
     queryKey: ["class-enroll", idNum, user?.id],
     enabled: !!idNum && !!user,
-    queryFn: async () => (await supabase.from("class_enrollments").select("id").eq("class_id", idNum).eq("user_id", user!.id).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("class_enrollments").select("id,status").eq("class_id", idNum).eq("user_id", user!.id).maybeSingle()).data,
   });
 
   const { data: enrollCount } = useQuery({
     queryKey: ["class-enroll-count", idNum],
     enabled: !!idNum,
-    queryFn: async () => (await supabase.from("class_enrollments").select("id", { count: "exact", head: true }).eq("class_id", idNum)).count ?? 0,
+    queryFn: async () => (await supabase.from("class_enrollments").select("id", { count: "exact", head: true }).eq("class_id", idNum).eq("status", "approved")).count ?? 0,
   });
 
   const { data: reviews } = useQuery({
@@ -80,24 +98,109 @@ const ClassDetail = () => {
   });
 
   const isInstructor = !!user && cls?.instructor_id === user.id;
-  const enrolled = !!enrollment;
+  const enrollmentStatus = enrollment?.status as EnrollmentStatus | undefined;
+  const approvedEnrollment = enrollmentStatus === "approved";
+  const pendingEnrollment = enrollmentStatus === "pending";
+  const rejectedEnrollment = enrollmentStatus === "rejected";
+  const enrolled = approvedEnrollment;
   const avgRating = reviews && reviews.length > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "0.0";
+
+  const { data: studentRows } = useQuery({
+    queryKey: ["class-students", idNum, isInstructor],
+    enabled: !!idNum && isInstructor,
+    queryFn: async (): Promise<StudentRow[]> => {
+      const { data, error } = await supabase
+        .from("class_enrollments")
+        .select("id,user_id,status,enrolled_at")
+        .eq("class_id", idNum)
+        .order("enrolled_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StudentRow[];
+    },
+  });
+
+  const studentIds = Array.from(new Set((studentRows ?? []).map((row) => row.user_id).filter(Boolean)));
+  const { data: studentProfiles } = useQuery({
+    queryKey: ["class-student-profiles", studentIds.join(",")],
+    enabled: studentIds.length > 0,
+    queryFn: async () => {
+      const [{ data: profiles }, { data: appUsers }] = await Promise.all([
+        supabase.from("profiles").select("id,name,nickname,avatar_url,email").in("id", studentIds),
+        supabase.from("users").select("id,nickname,email,first_name,last_name,profile_image_url").in("id", studentIds),
+      ]);
+      const map = new Map<string, StudentProfile>();
+      (appUsers ?? []).forEach((u) => {
+        const appFullName = fullName(u.first_name, u.last_name);
+        map.set(u.id, {
+          id: u.id,
+          name: firstText(u.nickname, appFullName, u.email, fallbackUserName(u.id)),
+          email: u.email ?? null,
+          avatar_url: u.profile_image_url ?? null,
+        });
+      });
+      (profiles ?? []).forEach((p) => {
+        const existing = map.get(p.id);
+        map.set(p.id, {
+          id: p.id,
+          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          email: p.email ?? existing?.email ?? null,
+          avatar_url: p.avatar_url ?? existing?.avatar_url ?? null,
+        });
+      });
+      return map;
+    },
+  });
+
+  const updateStudent = useMutation({
+    mutationFn: async ({ rowId, status }: { rowId: number; status: EnrollmentStatus }) => {
+      const { error } = await supabase.from("class_enrollments").update({ status }).eq("id", rowId);
+      if (error) throw error;
+      return status;
+    },
+    onSuccess: (status) => {
+      toast({ title: status === "approved" ? t.classDetail.approveSuccess : t.classDetail.rejectSuccess });
+      qc.invalidateQueries({ queryKey: ["class-students", idNum] });
+      qc.invalidateQueries({ queryKey: ["class-enroll-count", idNum] });
+      qc.invalidateQueries({ queryKey: ["class-enroll", idNum] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const removeStudent = useMutation({
+    mutationFn: async (rowId: number) => {
+      const { error } = await supabase.from("class_enrollments").delete().eq("id", rowId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: t.classDetail.removeSuccess });
+      qc.invalidateQueries({ queryKey: ["class-students", idNum] });
+      qc.invalidateQueries({ queryKey: ["class-enroll-count", idNum] });
+      qc.invalidateQueries({ queryKey: ["class-enroll", idNum] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   const enroll = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error(t.classDetail.notFound);
-      if (enrolled) {
+      if (approvedEnrollment || pendingEnrollment) {
         const { error } = await supabase.from("class_enrollments").delete().eq("class_id", idNum).eq("user_id", user.id);
         if (error) throw error;
+      } else if (rejectedEnrollment) {
+        const { error: deleteError } = await supabase.from("class_enrollments").delete().eq("class_id", idNum).eq("user_id", user.id);
+        if (deleteError) throw deleteError;
+        const { error } = await supabase.from("class_enrollments").insert({ class_id: idNum, user_id: user.id, status: "pending" });
+        if (error) throw error;
       } else {
-        const { error } = await supabase.from("class_enrollments").insert({ class_id: idNum, user_id: user.id });
+        const { error } = await supabase.from("class_enrollments").insert({ class_id: idNum, user_id: user.id, status: "pending" });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      toast({ title: enrolled ? t.classDetail.cancelEnroll : t.classDetail.enrollSuccess });
+      toast({ title: approvedEnrollment || pendingEnrollment ? t.classDetail.cancelEnroll : t.classDetail.enrollSuccess });
       qc.invalidateQueries({ queryKey: ["class-enroll", idNum, user?.id] });
       qc.invalidateQueries({ queryKey: ["class-enroll-count", idNum] });
+      qc.invalidateQueries({ queryKey: ["class-students", idNum] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -156,6 +259,12 @@ const ClassDetail = () => {
               <p className="text-xs text-muted-foreground">{t.classDetail.instructor}</p>
               <p className="text-sm font-semibold">{instructor?.name ?? instructor?.email ?? t.classDetail.instructor}</p>
             </div>
+            {isInstructor && (
+              <Button type="button" variant="outline" size="sm" className="ml-auto h-9 rounded-full" onClick={() => setStudentsOpen(true)}>
+                <Users className="h-4 w-4 mr-1" />
+                {t.classDetail.manageStudents}
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
             {cls.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {tr(cls.location)}</span>}
@@ -206,7 +315,7 @@ const ClassDetail = () => {
 
           {activeTab === "reviews" && (
             <div className="pt-4 pb-4 px-4 space-y-4">
-              {user && enrolled && !isInstructor && (
+              {user && approvedEnrollment && !isInstructor && (
                 <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
                   <div className="flex items-center gap-1">
                     {[1,2,3,4,5].map((s) => (
@@ -239,19 +348,69 @@ const ClassDetail = () => {
 
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card/95 backdrop-blur-md border-t border-border safe-bottom z-40">
         <div className="flex items-center gap-2 p-3">
-          {(enrolled || isInstructor) && (
+          {(approvedEnrollment || isInstructor) && (
             <Link to={`/classes/${cls.id}/chat`} className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center" aria-label="chat">
               <MessageCircle className="h-5 w-5" />
             </Link>
           )}
           <Button onClick={() => user ? enroll.mutate() : navigate("/login")} disabled={enroll.isPending || isInstructor} className={cn(
             "flex-1 h-12 rounded-xl text-base font-bold border-0",
-            (enrolled || isInstructor) ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
+            (approvedEnrollment || pendingEnrollment || isInstructor) ? "bg-muted text-foreground" : "gradient-primary shadow-glow"
           )}>
-            {isInstructor ? t.classDetail.myClass : enrolled ? t.classDetail.enrolled : t.classDetail.enroll}
+            {isInstructor ? t.classDetail.myClass : approvedEnrollment ? t.classDetail.enrolled : pendingEnrollment ? t.classDetail.pending : t.classDetail.enroll}
           </Button>
         </div>
       </div>
+
+      <Dialog open={studentsOpen} onOpenChange={setStudentsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.classDetail.manageStudents}</DialogTitle>
+            <DialogDescription>{t.classDetail.manageStudentsDesc}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
+            {studentRows && studentRows.length > 0 ? studentRows.map((row) => {
+              const profile = studentProfiles?.get(row.user_id);
+              const statusLabel = row.status === "approved" ? t.classDetail.approved : row.status === "rejected" ? t.classDetail.rejected : t.classDetail.pending;
+              return (
+                <div key={row.id} className="rounded-2xl border border-border bg-card p-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={profile?.avatar_url ?? undefined} />
+                      <AvatarFallback>{(profile?.name ?? fallbackUserName(row.user_id)).slice(0, 1)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold truncate">{profile?.name ?? fallbackUserName(row.user_id)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{profile?.email ?? row.user_id}</p>
+                    </div>
+                    <Badge variant={row.status === "approved" ? "default" : row.status === "rejected" ? "destructive" : "secondary"}>{statusLabel}</Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap justify-end gap-2">
+                    {row.status !== "approved" && (
+                      <Button size="sm" onClick={() => updateStudent.mutate({ rowId: row.id, status: "approved" })} disabled={updateStudent.isPending}>
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        {t.classDetail.approve}
+                      </Button>
+                    )}
+                    {row.status !== "rejected" && (
+                      <Button size="sm" variant="outline" onClick={() => updateStudent.mutate({ rowId: row.id, status: "rejected" })} disabled={updateStudent.isPending}>
+                        <UserX className="h-4 w-4 mr-1" />
+                        {t.classDetail.reject}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => removeStudent.mutate(row.id)} disabled={removeStudent.isPending}>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      {t.classDetail.remove}
+                    </Button>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="py-10 text-center text-sm text-muted-foreground">{t.classDetail.noStudents}</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

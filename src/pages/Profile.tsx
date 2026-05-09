@@ -46,7 +46,7 @@ const Profile = () => {
     queryKey: ["my-class-count", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { count } = await supabase.from("class_enrollments").select("id", { count: "exact", head: true }).eq("user_id", user!.id);
+      const { count } = await supabase.from("class_enrollments").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "approved");
       return count ?? 0;
     },
   });

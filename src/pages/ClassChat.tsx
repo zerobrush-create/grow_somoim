@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Languages, Send, Trash2, Reply } from "lucide-react";
+import { ArrowLeft, Languages, Send, Trash2, Reply, MessageCircle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ import { TranslatedMessageBubble } from "@/components/chat/TranslatedMessageBubb
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseChatMessageContent, type ReplyTarget } from "@/lib/chatMessage";
 import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Msg = { id: number; content: string; sender_id: string; created_at: string };
 
@@ -39,6 +40,7 @@ const ClassChat = () => {
   const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const { translated, errors: translationErrors, loading: translating, autoTranslate, setAutoTranslate, translate, autoTranslateMessages } = useMessageTranslation();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -48,12 +50,20 @@ const ClassChat = () => {
   const { data: cls } = useQuery({
     queryKey: ["class-meta", idNum],
     enabled: !!idNum,
-    queryFn: async () => (await supabase.from("classes").select("id,title").eq("id", idNum).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("classes").select("id,title,instructor_id").eq("id", idNum).maybeSingle()).data,
   });
+
+  const { data: enrollment } = useQuery({
+    queryKey: ["class-enroll", idNum, user?.id],
+    enabled: !!idNum && !!user,
+    queryFn: async () => (await supabase.from("class_enrollments").select("status").eq("class_id", idNum).eq("user_id", user!.id).maybeSingle()).data,
+  });
+
+  const canEnter = !!user && (cls?.instructor_id === user.id || enrollment?.status === "approved");
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["class-messages", idNum],
-    enabled: !!idNum && !!user,
+    enabled: !!idNum && !!user && canEnter,
     queryFn: async (): Promise<Msg[]> => {
       const { data, error } = await supabase.from("class_messages")
         .select("id,content,sender_id,created_at").eq("class_id", idNum)
@@ -96,13 +106,13 @@ const ClassChat = () => {
   });
 
   useEffect(() => {
-    if (!idNum) return;
+    if (!idNum || !canEnter) return;
     const channel = supabase.channel(`class-messages-${idNum}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "class_messages", filter: `class_id=eq.${idNum}` },
         () => qc.invalidateQueries({ queryKey: ["class-messages", idNum] }))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [idNum, qc]);
+  }, [idNum, qc, canEnter]);
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
 
@@ -135,6 +145,27 @@ const ClassChat = () => {
   }, [autoTranslate, autoTranslateMessages, messages, user]);
 
   if (!user) { navigate("/login"); return null; }
+
+  if (cls && !canEnter) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-md min-h-screen bg-background">
+          <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label="뒤로">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-base font-bold flex-1 truncate">{cls.title}</h1>
+          </header>
+          <div className="px-6 py-20 text-center">
+            <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground/40" />
+            <p className="mt-4 font-semibold">{t.classDetail.waitingApproval}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t.classDetail.chatLocked}</p>
+            <Button className="mt-6" variant="outline" onClick={() => navigate(-1)}>{t.common.back}</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

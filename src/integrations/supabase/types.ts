@@ -532,18 +532,21 @@ export type Database = {
           class_id: number
           enrolled_at: string
           id: number
+          status: "pending" | "approved" | "rejected"
           user_id: string
         }
         Insert: {
           class_id: number
           enrolled_at?: string
           id?: number
+          status?: "pending" | "approved" | "rejected"
           user_id: string
         }
         Update: {
           class_id?: number
           enrolled_at?: string
           id?: number
+          status?: "pending" | "approved" | "rejected"
           user_id?: string
         }
         Relationships: [

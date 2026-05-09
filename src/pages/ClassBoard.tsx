@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Heart, MessageSquare, Trash2, Pin } from "lucide-react";
+import { ArrowLeft, Plus, Heart, MessageSquare, Trash2, Pin, Lock } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const isNewPost = (createdAt: string) => Date.now() - new Date(createdAt).getTime() < 24 * 60 * 60 * 1000;
 
@@ -19,6 +20,7 @@ const ClassBoard = () => {
   const classId = Number(id);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -33,9 +35,16 @@ const ClassBoard = () => {
   });
   const isInstructor = cls?.instructor_id === user?.id;
 
+  const { data: enrollment } = useQuery({
+    queryKey: ["class-enroll", classId, user?.id],
+    enabled: !!classId && !!user,
+    queryFn: async () => (await supabase.from("class_enrollments").select("status").eq("class_id", classId).eq("user_id", user!.id).maybeSingle()).data,
+  });
+  const canEnter = !!user && (isInstructor || enrollment?.status === "approved");
+
   const { data: posts, isLoading } = useQuery({
     queryKey: ["class-board", classId],
-    enabled: !!classId,
+    enabled: !!classId && canEnter,
     queryFn: async () => (await supabase.from("class_board_posts").select("*").eq("class_id", classId).order("is_pinned", { ascending: false }).order("created_at", { ascending: false })).data ?? [],
   });
 
@@ -102,7 +111,7 @@ const ClassBoard = () => {
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center"><ArrowLeft className="h-5 w-5" /></button>
           <h1 className="text-base font-bold flex-1 truncate">{cls?.title ?? "클래스 게시판"}</h1>
-          {user && (
+          {user && canEnter && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button size="icon" variant="ghost"><Plus className="h-5 w-5" /></Button></DialogTrigger>
               <DialogContent>
@@ -118,6 +127,14 @@ const ClassBoard = () => {
         </header>
 
         <div className="p-4 space-y-3">
+          {cls && !canEnter ? (
+            <div className="py-20 text-center">
+              <Lock className="mx-auto h-12 w-12 text-muted-foreground/40" />
+              <p className="mt-4 font-semibold">{t.classDetail.waitingApproval}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t.classDetail.chatLocked}</p>
+            </div>
+          ) : (
+          <>
           {isLoading ? <Skeleton className="h-24 w-full" /> : posts && posts.length > 0 ? posts.map((p) => (
             <div key={p.id} className={`bg-card rounded-xl p-4 border ${p.is_pinned ? "border-primary" : "border-border"}`}>
               <div className="flex items-start gap-2">
@@ -151,6 +168,8 @@ const ClassBoard = () => {
               )}
             </div>
           )) : <p className="text-center text-sm text-muted-foreground py-12">아직 게시글이 없어요</p>}
+          </>
+          )}
         </div>
       </div>
     </div>

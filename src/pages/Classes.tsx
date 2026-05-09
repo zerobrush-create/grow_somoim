@@ -93,7 +93,7 @@ const Classes = () => {
   const { data: enrollAgg } = useQuery({
     queryKey: ["classes-enroll-agg"],
     queryFn: async () => {
-      const { data } = await supabase.from("class_enrollments").select("class_id");
+      const { data } = await supabase.from("class_enrollments").select("class_id").eq("status", "approved");
       const map: Record<number, number> = {};
       (data ?? []).forEach((r) => { map[r.class_id as number] = (map[r.class_id as number] ?? 0) + 1; });
       return map;
