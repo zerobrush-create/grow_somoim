@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -151,7 +151,7 @@ const ClassCreate = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { lang } = useLanguage();
-  const copy = TEXT[lang];
+  const copy = TEXT[lang] ?? TEXT.ko;
   const [form, setForm] = useState({ title: "", category: "", description: "", location: "", price: "", schedule: "", curriculum: "", max_students: 30 });
 
   const create = useMutation({
@@ -177,7 +177,11 @@ const ClassCreate = () => {
     onError: (e: Error) => toast({ title: copy.fail, description: e.message, variant: "destructive" }),
   });
 
-  if (!user) { navigate("/login"); return null; }
+  useEffect(() => {
+    if (!user) navigate("/login");
+  }, [navigate, user]);
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">

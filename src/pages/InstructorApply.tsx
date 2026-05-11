@@ -76,7 +76,7 @@ const InstructorApply = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { lang } = useLanguage();
-  const copy = TEXT[lang];
+  const copy = TEXT[lang] ?? TEXT.ko;
 
   const { data: existing } = useQuery({
     queryKey: ["instructor-app", user?.id],

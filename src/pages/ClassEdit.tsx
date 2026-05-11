@@ -166,7 +166,7 @@ const ClassEdit = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { lang } = useLanguage();
-  const copy = TEXT[lang];
+  const copy = TEXT[lang] ?? TEXT.ko;
   const qc = useQueryClient();
   const [form, setForm] = useState({
     title: "",

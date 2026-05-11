@@ -5,6 +5,18 @@ import { Button } from "@/components/ui/button";
 type Props = { children: ReactNode };
 type State = { hasError: boolean; message?: string };
 
+const CHUNK_RELOAD_KEY = "grow_chunk_reload_once";
+
+const isChunkLoadError = (error: Error) => {
+  const message = `${error?.name ?? ""} ${error?.message ?? ""}`.toLowerCase();
+  return (
+    message.includes("failed to fetch dynamically imported module") ||
+    message.includes("importing a module script failed") ||
+    message.includes("loading chunk") ||
+    message.includes("chunkloaderror")
+  );
+};
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
@@ -14,10 +26,22 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error) {
     console.error("ErrorBoundary:", error);
+    if (!isChunkLoadError(error)) return;
+
+    try {
+      if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === "1") return;
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+      window.location.reload();
+    } catch {
+      window.location.reload();
+    }
   }
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    if (!this.state.hasError) {
+      try { sessionStorage.removeItem(CHUNK_RELOAD_KEY); } catch {}
+      return this.props.children;
+    }
     return (
       <main className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="max-w-sm w-full text-center">
