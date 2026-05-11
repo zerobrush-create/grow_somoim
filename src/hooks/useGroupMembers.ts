@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fallbackUserName, firstText, fullName } from "@/lib/userIdentity";
+import { firstText, fullName, shortUserId } from "@/lib/userIdentity";
 
 export type GroupMember = {
   userId: string;
@@ -9,6 +9,8 @@ export type GroupMember = {
   name: string;
   email: string | null;
   avatarUrl: string | null;
+  fallbackId: string | null;
+  hasProfileName: boolean;
 };
 
 export const useGroupMembers = (groupId?: string) => {
@@ -37,33 +39,42 @@ export const useGroupMembers = (groupId?: string) => {
 
       (appUsers ?? []).forEach((u) => {
         const appFullName = fullName(u.first_name, u.last_name);
+        const name = firstText(u.nickname, appFullName, u.email);
         profileMap.set(u.id, {
           userId: u.id,
-          name: firstText(u.nickname, appFullName, u.email, fallbackUserName(u.id)),
+          name,
           email: u.email ?? null,
           avatarUrl: u.profile_image_url ?? null,
+          fallbackId: shortUserId(u.id),
+          hasProfileName: !!name,
         });
       });
 
       (profiles ?? []).forEach((p) => {
         const existing = profileMap.get(p.id);
+        const name = firstText(p.nickname, existing?.name, p.name, p.email, existing?.email);
         profileMap.set(p.id, {
           userId: p.id,
-          name: firstText(p.nickname, existing?.name, p.name, p.email, existing?.email, fallbackUserName(p.id)),
+          name,
           email: p.email ?? existing?.email ?? null,
           avatarUrl: p.avatar_url ?? existing?.avatarUrl ?? null,
+          fallbackId: shortUserId(p.id),
+          hasProfileName: !!name,
         });
       });
 
       return (memberships ?? []).map((m) => {
         const profile = profileMap.get(m.user_id);
+        const fallbackId = shortUserId(m.user_id);
         return {
           userId: m.user_id,
           role: m.role,
           joinedAt: m.joined_at,
-          name: profile?.name ?? fallbackUserName(m.user_id),
+          name: profile?.name ?? "",
           email: profile?.email ?? null,
           avatarUrl: profile?.avatarUrl ?? null,
+          fallbackId,
+          hasProfileName: profile?.hasProfileName ?? false,
         };
       });
     },

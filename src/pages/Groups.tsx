@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Search, MapPin, Users, Plus, X, Star, History } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -27,11 +27,13 @@ const Groups = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
   const { data: groups, isLoading, error } = useGroups();
   const { user } = useAuth();
   const qc = useQueryClient();
   const { lang, t } = useLanguage();
   const tr = (value?: string | null) => displayText(value, lang);
+  const myOnly = searchParams.get("mine") === "1";
 
   const SORTS: { id: SortKey; label: string }[] = [
     { id: "recent", label: t.groups.sortRecent },
@@ -49,6 +51,19 @@ const Groups = () => {
     queryKey: ["search-history", user?.id],
     enabled: !!user,
     queryFn: async () => (await supabase.from("search_history").select("id,query,created_at").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(8)).data ?? [],
+  });
+
+  const { data: myGroupIds = [] } = useQuery({
+    queryKey: ["my-group-ids", user?.id, myOnly],
+    enabled: !!user && myOnly,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("memberships")
+        .select("group_id")
+        .eq("user_id", user!.id)
+        .eq("status", "approved");
+      return (data ?? []).map((m) => m.group_id);
+    },
   });
 
   const saveQuery = useMutation({
@@ -84,6 +99,7 @@ const Groups = () => {
   }, []);
 
   const filtered = (groups ?? []).filter((g) => {
+    if (myOnly && !myGroupIds.includes(g.id)) return false;
     if (active !== "all" && g.category !== mapCategoryFilter(active)) return false;
     if (region !== "전체" && !(g.location ?? "").includes(region)) return false;
     if (query.trim()) {
@@ -108,7 +124,7 @@ const Groups = () => {
     <MobileShell>
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border">
         <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-xl font-bold flex-1">{t.nav.groups}</h1>
+          <h1 className="text-xl font-bold flex-1">{myOnly ? t.profile.myGroups : t.nav.groups}</h1>
           <Link
             to="/groups/new"
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-soft transition-smooth hover:bg-primary/90"

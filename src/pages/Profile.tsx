@@ -268,7 +268,7 @@ const Profile = () => {
         <section className="pt-5">
           <div className="px-4 flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold">{t.profile.myGroups}</h3>
-            <Link to="/groups" className="text-xs text-muted-foreground flex items-center">{t.profile.seeAll} <ChevronRight className="h-3 w-3" /></Link>
+            <Link to="/groups?mine=1" className="text-xs text-muted-foreground flex items-center">{t.profile.viewMyGroups} <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="divide-y divide-border">
             {myGroups.map((g) => (

@@ -20,6 +20,7 @@ import { canDeleteMessage, encodeReplyMessageContent, getMessagePreview, parseCh
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { firstText, fullName } from "@/lib/userIdentity";
 import { shareOrCopyLink } from "@/lib/shareLink";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Message = {
   id: number;
@@ -49,6 +50,7 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [text, setText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -208,6 +210,9 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
     broadcastTyping();
     focusInput();
   };
+
+  const getMemberInitial = (name: string, hasProfileName: boolean) =>
+    hasProfileName ? name.trim().slice(0, 1).toUpperCase() : "?";
 
   // 자동 스크롤
   useEffect(() => {
@@ -500,18 +505,21 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
             ) : members.length > 0 ? (
               members.map((member) => {
                 const isGroupOwner = member.userId === group?.owner_id;
+                const memberName = member.hasProfileName ? member.name : t.groupDetail.profileMissing;
                 return (
                   <div key={member.userId} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={member.avatarUrl ?? undefined} />
-                      <AvatarFallback>{member.name.trim().slice(0, 1).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{getMemberInitial(memberName, member.hasProfileName)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{member.name}</p>
-                      {member.email && <p className="truncate text-xs text-muted-foreground">{member.email}</p>}
+                      <p className="truncate text-sm font-semibold">{memberName}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {member.email ?? (member.fallbackId ? `ID ${member.fallbackId}` : "")}
+                      </p>
                     </div>
                     <Badge variant={isGroupOwner ? "default" : "secondary"} className="shrink-0">
-                      {isGroupOwner ? "모임장" : "멤버"}
+                      {isGroupOwner ? t.groupDetail.ownerRole : t.groupDetail.memberRole}
                     </Badge>
                   </div>
                 );
