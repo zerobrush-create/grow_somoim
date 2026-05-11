@@ -128,8 +128,8 @@ const Profile = () => {
         <div className="flex gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-muted transition-smooth w-9 h-9 flex items-center justify-center text-base" aria-label={t.profile.languageChange}>
-                {LANGUAGE_LABELS[lang].flag}
+              <button className="p-2 rounded-full hover:bg-muted transition-smooth w-12 h-12 flex items-center justify-center text-2xl leading-none" aria-label={t.profile.languageChange}>
+                <span aria-hidden="true">{LANGUAGE_LABELS[lang].flag}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
@@ -139,7 +139,7 @@ const Profile = () => {
                   onClick={() => setLang(code)}
                   className={`gap-2 ${lang === code ? "font-semibold text-primary" : ""}`}
                 >
-                  <span className="text-base">{flag}</span>
+                  <span className="text-xl">{flag}</span>
                   {label}
                 </DropdownMenuItem>
               ))}
