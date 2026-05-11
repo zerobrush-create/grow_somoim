@@ -10,30 +10,24 @@ const MYMEMORY_LANG: Record<Language, string> = {
   ru: "ru",
 };
 
-const TRANSLATION_EMPTY_MESSAGE: Record<Language, string> = {
-  ko: "선택한 언어와 같은 메시지이거나 번역할 수 없는 문장이에요.",
-  en: "This message is already in your selected language or cannot be translated.",
-  ja: "選択中の言語と同じメッセージか、翻訳できない文です。",
-  zh: "这条消息可能已经是所选语言，或无法翻译。",
-  ru: "Сообщение уже на выбранном языке или его не удалось перевести.",
-};
-
-const TRANSLATION_FAILED_MESSAGE: Record<Language, string> = {
-  ko: "번역을 불러오지 못했어요. 다시 시도해 주세요.",
-  en: "Could not load translation. Please try again.",
-  ja: "翻訳を読み込めませんでした。もう一度お試しください。",
-  zh: "无法加载翻译，请重试。",
-  ru: "Не удалось загрузить перевод. Попробуйте ещё раз.",
-};
-
 const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 const hasHangul = (value: string) => /[가-힣]/.test(value);
+const hasKana = (value: string) => /[\u3040-\u30ff]/.test(value);
+const hasCjk = (value: string) => /[\u3400-\u9fff]/.test(value);
+const hasCyrillic = (value: string) => /[\u0400-\u04ff]/.test(value);
+const hasLatin = (value: string) => /[A-Za-z]/.test(value);
 
-const shouldTranslateMessage = (text: string, lang: Language) => {
+export const shouldOfferMessageTranslation = (text: string, lang: Language) => {
   const trimmed = text.trim();
   if (!trimmed || trimmed.startsWith("[img:")) return false;
-  if (lang === "ko" && hasHangul(trimmed)) return false;
-  return true;
+  if (lang === "ko") return !hasHangul(trimmed);
+  if (lang === "ja") return !hasKana(trimmed);
+  if (lang === "zh") return !(hasCjk(trimmed) && !hasHangul(trimmed) && !hasKana(trimmed));
+  if (lang === "ru") return !hasCyrillic(trimmed);
+  if (lang === "en") {
+    return !(hasLatin(trimmed) && !hasHangul(trimmed) && !hasKana(trimmed) && !hasCjk(trimmed) && !hasCyrillic(trimmed));
+  }
+  return false;
 };
 
 async function fetchGoogleTranslation(text: string, targetLang: string): Promise<string> {
@@ -59,7 +53,7 @@ async function fetchMyMemoryTranslation(text: string, targetLang: string): Promi
   if (!res.ok) throw new Error("MyMemory translation failed");
   const json = await res.json();
   const translated: string = json?.responseData?.translatedText ?? "";
-  if (/invalid source language/i.test(translated)) return "";
+  if (/invalid source language|langpair|rfc3066|almost all languages|no content/i.test(translated)) return "";
   return translated.trim();
 }
 
@@ -108,7 +102,7 @@ export function useMessageTranslation() {
       setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
       return;
     }
-    if (!shouldTranslateMessage(text, lang)) {
+    if (!shouldOfferMessageTranslation(text, lang)) {
       setTranslated((prev) => { const n = { ...prev }; delete n[id]; return n; });
       setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
       return;
@@ -122,10 +116,12 @@ export function useMessageTranslation() {
       if (result) {
         setTranslated((prev) => ({ ...prev, [id]: result }));
       } else {
-        setErrors((prev) => ({ ...prev, [id]: TRANSLATION_EMPTY_MESSAGE[lang] }));
+        setTranslated((prev) => { const n = { ...prev }; delete n[id]; return n; });
+        setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
       }
     } catch {
-      setErrors((prev) => ({ ...prev, [id]: TRANSLATION_FAILED_MESSAGE[lang] }));
+      setTranslated((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
     }
     pendingRef.current.delete(id);
     setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
@@ -136,7 +132,7 @@ export function useMessageTranslation() {
   ) => {
     for (const m of messages) {
       if (!m.isIncoming) continue;
-      if (!shouldTranslateMessage(m.content, lang)) continue;
+      if (!shouldOfferMessageTranslation(m.content, lang)) continue;
       if (translated[m.id] || errors[m.id] || pendingRef.current.has(m.id)) continue;
       pendingRef.current.add(m.id);
       setLoading((prev) => new Set(prev).add(m.id));

@@ -14,12 +14,21 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { MapLink } from "@/components/MapLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText } from "@/i18n/format";
-import { copyTextToClipboard, shareOrCopyLink } from "@/lib/shareLink";
+import type { Language } from "@/i18n/translations";
+import { copyTextToClipboard } from "@/lib/shareLink";
 import GroupBoard from "./GroupBoard";
 import GroupChat from "./GroupChat";
 import GroupEvents from "./GroupEvents";
 
 type Tab = "intro" | "board" | "photos" | "meetups" | "flash" | "chat";
+
+const SHARE_SHEET_LABELS: Record<Language, { title: string; copy: string; copied: string; open: string; close: string }> = {
+  ko: { title: "공유", copy: "링크 복사", copied: "링크를 복사했어요", open: "열기", close: "닫기" },
+  en: { title: "Share", copy: "Copy link", copied: "Link copied", open: "Open", close: "Close" },
+  ja: { title: "共有", copy: "リンクをコピー", copied: "リンクをコピーしました", open: "開く", close: "閉じる" },
+  zh: { title: "分享", copy: "复制链接", copied: "链接已复制", open: "打开", close: "关闭" },
+  ru: { title: "Поделиться", copy: "Скопировать ссылку", copied: "Ссылка скопирована", open: "Открыть", close: "Закрыть" },
+};
 
 const GroupDetail = () => {
   const { id } = useParams();
@@ -29,6 +38,7 @@ const GroupDetail = () => {
   const { lang, t } = useLanguage();
   const { data: group, isLoading } = useGroup(id);
   const [activeTab, setActiveTab] = useState<Tab>("intro");
+  const [inviteSheetOpen, setInviteSheetOpen] = useState(false);
   const tr = (value?: string | null) => displayText(value, lang);
 
   const tabs: { id: Tab; emoji: string; label: string }[] = [
@@ -108,36 +118,29 @@ const GroupDetail = () => {
     const copied = await copyTextToClipboard(url);
 
     if (copied) {
-      toast({ title: t.groupDetail.inviteCopied });
+      toast({ title: SHARE_SHEET_LABELS[lang].copied });
+      setInviteSheetOpen(false);
       return;
     }
 
-    const result = await shareOrCopyLink({
-      title: group?.name,
-      text: t.groupDetail.inviteShareText,
-      url,
-    });
-
-    if (result.ok && result.action === "copied") {
-      toast({ title: t.groupDetail.inviteCopied });
-    } else if (result.action === "failed") {
-      toast({ title: t.groupDetail.copyInviteLink, description: url });
-    }
+    setInviteSheetOpen(true);
   };
 
   const shareInvite = async () => {
     const url = getInviteUrl();
-    const result = await shareOrCopyLink({
-      title: group?.name,
-      text: t.groupDetail.inviteShareText,
-      url,
-    });
-
-    if (result.ok && result.action === "copied") {
-      toast({ title: t.groupDetail.inviteCopied });
-    } else if (result.action === "failed") {
-      toast({ title: t.groupDetail.copyInviteLink, description: url });
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: tr(group?.name) || t.groupDetail.inviteShareText,
+          text: t.groupDetail.inviteShareText,
+          url,
+        });
+        return;
+      } catch {
+        return;
+      }
     }
+    setInviteSheetOpen(true);
   };
 
   if (isLoading) {
@@ -177,6 +180,16 @@ const GroupDetail = () => {
   const isOwner = !!user && group.owner_id === user.id;
   const isMember = myMembership?.status === "approved";
   const showJoinBar = !isOwner && !isMember;
+  const inviteUrl = getInviteUrl();
+  const shareSheetLabels = SHARE_SHEET_LABELS[lang];
+  const encodedInviteUrl = encodeURIComponent(inviteUrl);
+  const encodedInviteText = encodeURIComponent(`${tr(group.name)} ${inviteUrl}`);
+  const shareTargets = [
+    { label: "Telegram", icon: "✈️", href: `https://t.me/share/url?url=${encodedInviteUrl}&text=${encodedInviteText}` },
+    { label: "LINE", icon: "💬", href: `https://social-plugins.line.me/lineit/share?url=${encodedInviteUrl}` },
+    { label: "Facebook", icon: "f", href: `https://www.facebook.com/sharer/sharer.php?u=${encodedInviteUrl}` },
+    { label: "Mail", icon: "✉️", href: `mailto:?subject=${encodeURIComponent(tr(group.name) || "GROW")}&body=${encodedInviteText}` },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -341,6 +354,62 @@ const GroupDetail = () => {
             >
               {join.isPending ? t.groupDetail.applying : ctaLabel}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {inviteSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-4"
+          onClick={() => setInviteSheetOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-[28px] rounded-b-3xl bg-card p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-muted-foreground/25" />
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xl font-bold">{shareSheetLabels.title}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{inviteUrl}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInviteSheetOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-2xl leading-none text-foreground"
+                aria-label={shareSheetLabels.close}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 border-y border-border py-4">
+              {shareTargets.map((target) => (
+                <a
+                  key={target.label}
+                  href={target.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2 text-center text-xs font-semibold text-foreground"
+                >
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl shadow-sm">
+                    {target.icon}
+                  </span>
+                  <span>{target.label}</span>
+                </a>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={copyInviteLink}
+              className="mt-4 flex w-full items-center gap-3 rounded-2xl bg-muted px-4 py-4 text-left text-base font-bold text-foreground"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background">
+                <Copy className="h-6 w-6" />
+              </span>
+              {shareSheetLabels.copy}
+            </button>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { shouldOfferMessageTranslation } from "@/hooks/useMessageTranslation";
 import type { Language } from "@/i18n/translations";
 
 const LABELS: Record<Language, { translating: string; show: string; hide: string; retry: string; ai: string; translation: string }> = {
@@ -10,8 +11,6 @@ const LABELS: Record<Language, { translating: string; show: string; hide: string
   zh: { translating: "翻译中...", show: "查看翻译", hide: "隐藏翻译", retry: "重新翻译", ai: "AI", translation: "翻译" },
   ru: { translating: "Перевод...", show: "Перевести", hide: "Скрыть перевод", retry: "Повторить перевод", ai: "AI", translation: "Перевод" },
 };
-
-const hasHangul = (value: string) => /[가-힣]/.test(value);
 
 type TranslatedMessageBubbleProps = {
   mine: boolean;
@@ -32,7 +31,7 @@ export const TranslatedMessageBubble = ({
 }: TranslatedMessageBubbleProps) => {
   const { lang } = useLanguage();
   const labels = LABELS[lang];
-  const canShowTranslation = !(lang === "ko" && hasHangul(content));
+  const canShowTranslation = shouldOfferMessageTranslation(content, lang);
 
   return (
     <div className={cn("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
