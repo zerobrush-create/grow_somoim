@@ -239,7 +239,21 @@ const ClassDetail = () => {
     return <div className="min-h-screen bg-background"><div className="mx-auto max-w-md"><Skeleton className="aspect-[4/3] w-full" /></div></div>;
   }
   if (!cls) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">{t.classDetail.notFound}</p></div>;
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <BookOpen className="h-8 w-8" />
+        </div>
+        <p className="text-lg font-bold text-foreground">{t.classDetail.notFound}</p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            {t.common.back}
+          </Button>
+          <Button onClick={() => navigate("/classes")}>{t.classDetail.toList}</Button>
+        </div>
+      </div>
+    );
   }
 
   const tabItems: { id: Tab; label: string }[] = [
