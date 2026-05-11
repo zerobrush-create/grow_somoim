@@ -173,7 +173,7 @@ const ClassCreate = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (d) => { toast({ title: copy.success }); navigate(`/classes/${d.id}`); },
+    onSuccess: (d) => { toast({ title: copy.success }); navigate(`/classes/${d.id}`, { replace: true }); },
     onError: (e: Error) => toast({ title: copy.fail, description: e.message, variant: "destructive" }),
   });
 
@@ -187,7 +187,7 @@ const ClassCreate = () => {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md pb-10">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={copy.back}>
+          <button onClick={() => navigate("/classes")} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center" aria-label={copy.back}>
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-base font-bold">{copy.title}</h1>
