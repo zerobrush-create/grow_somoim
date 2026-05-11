@@ -27,6 +27,14 @@ const TRANSLATION_FAILED_MESSAGE: Record<Language, string> = {
 };
 
 const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+const hasHangul = (value: string) => /[가-힣]/.test(value);
+
+const shouldTranslateMessage = (text: string, lang: Language) => {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.startsWith("[img:")) return false;
+  if (lang === "ko" && hasHangul(trimmed)) return false;
+  return true;
+};
 
 async function fetchGoogleTranslation(text: string, targetLang: string): Promise<string> {
   const url = new URL("https://translate.googleapis.com/translate_a/single");
@@ -51,6 +59,7 @@ async function fetchMyMemoryTranslation(text: string, targetLang: string): Promi
   if (!res.ok) throw new Error("MyMemory translation failed");
   const json = await res.json();
   const translated: string = json?.responseData?.translatedText ?? "";
+  if (/invalid source language/i.test(translated)) return "";
   return translated.trim();
 }
 
@@ -99,6 +108,11 @@ export function useMessageTranslation() {
       setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
       return;
     }
+    if (!shouldTranslateMessage(text, lang)) {
+      setTranslated((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      return;
+    }
     if (pendingRef.current.has(id)) return;
     pendingRef.current.add(id);
     setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
@@ -122,7 +136,7 @@ export function useMessageTranslation() {
   ) => {
     for (const m of messages) {
       if (!m.isIncoming) continue;
-      if (m.content.startsWith("[img:")) continue;
+      if (!shouldTranslateMessage(m.content, lang)) continue;
       if (translated[m.id] || errors[m.id] || pendingRef.current.has(m.id)) continue;
       pendingRef.current.add(m.id);
       setLoading((prev) => new Set(prev).add(m.id));
@@ -135,7 +149,7 @@ export function useMessageTranslation() {
       pendingRef.current.delete(m.id);
       setLoading((prev) => { const n = new Set(prev); n.delete(m.id); return n; });
     }
-  }, [errors, translated, targetCode]);
+  }, [errors, lang, translated, targetCode]);
 
   return { translated, errors, loading, autoTranslate, setAutoTranslate, translate, autoTranslateMessages };
 }

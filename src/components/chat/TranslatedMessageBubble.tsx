@@ -11,6 +11,8 @@ const LABELS: Record<Language, { translating: string; show: string; hide: string
   ru: { translating: "Перевод...", show: "Перевести", hide: "Скрыть перевод", retry: "Повторить перевод", ai: "AI", translation: "Перевод" },
 };
 
+const hasHangul = (value: string) => /[가-힣]/.test(value);
+
 type TranslatedMessageBubbleProps = {
   mine: boolean;
   content: string;
@@ -30,6 +32,7 @@ export const TranslatedMessageBubble = ({
 }: TranslatedMessageBubbleProps) => {
   const { lang } = useLanguage();
   const labels = LABELS[lang];
+  const canShowTranslation = !(lang === "ko" && hasHangul(content));
 
   return (
     <div className={cn("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
@@ -42,29 +45,31 @@ export const TranslatedMessageBubble = ({
         {content}
       </div>
 
-      <button
-        type="button"
-        onClick={onTranslate}
-        disabled={isTranslating}
-        className={cn(
-          "inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-semibold transition-smooth",
-          translatedText
-            ? "bg-primary-soft text-primary"
-            : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
-          isTranslating && "cursor-wait opacity-80",
-        )}
-      >
-        <Languages className="h-3 w-3" />
-        {isTranslating ? labels.translating : translatedText ? labels.hide : translationError ? labels.retry : labels.show}
-      </button>
+      {canShowTranslation && (
+        <button
+          type="button"
+          onClick={onTranslate}
+          disabled={isTranslating}
+          className={cn(
+            "inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-semibold transition-smooth",
+            translatedText
+              ? "bg-primary-soft text-primary"
+              : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
+            isTranslating && "cursor-wait opacity-80",
+          )}
+        >
+          <Languages className="h-3 w-3" />
+          {isTranslating ? labels.translating : translatedText ? labels.hide : translationError ? labels.retry : labels.show}
+        </button>
+      )}
 
-      {translationError && !translatedText && (
+      {canShowTranslation && translationError && !translatedText && (
         <p className="max-w-full rounded-2xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
           {translationError}
         </p>
       )}
 
-      {translatedText && (
+      {canShowTranslation && translatedText && (
         <div
           className={cn(
             "max-w-full rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-foreground shadow-sm",
