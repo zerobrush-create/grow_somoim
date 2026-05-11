@@ -110,7 +110,7 @@ const GroupDetail = () => {
     if (copied) {
       toast({ title: t.groupDetail.inviteCopied });
     } else {
-      toast({ title: t.groupDetail.inviteFail, description: url, variant: "destructive" });
+      toast({ title: t.groupDetail.inviteFail, description: url });
     }
   };
 
@@ -124,8 +124,6 @@ const GroupDetail = () => {
 
     if (result.ok && result.action === "copied") {
       toast({ title: t.groupDetail.inviteCopied });
-    } else if (result.action !== "cancelled") {
-      toast({ title: t.groupDetail.inviteFail, description: url, variant: "destructive" });
     }
   };
 

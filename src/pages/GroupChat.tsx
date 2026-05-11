@@ -276,10 +276,8 @@ const GroupChat = ({ embedded = false, groupId }: { embedded?: boolean; groupId?
       url,
     });
 
-    if (result.ok) {
+    if (result.ok && result.action === "copied") {
       toast({ title: "초대 링크를 복사했어요" });
-    } else if (result.action !== "cancelled") {
-      toast({ title: "초대 링크를 복사하지 못했어요", description: url, variant: "destructive" });
     }
   };
 
