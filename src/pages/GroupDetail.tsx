@@ -109,8 +109,19 @@ const GroupDetail = () => {
 
     if (copied) {
       toast({ title: t.groupDetail.inviteCopied });
-    } else {
-      toast({ title: t.groupDetail.inviteFail, description: url });
+      return;
+    }
+
+    const result = await shareOrCopyLink({
+      title: group?.name,
+      text: t.groupDetail.inviteShareText,
+      url,
+    });
+
+    if (result.ok && result.action === "copied") {
+      toast({ title: t.groupDetail.inviteCopied });
+    } else if (result.action === "failed") {
+      toast({ title: t.groupDetail.copyInviteLink, description: url });
     }
   };
 
@@ -124,6 +135,8 @@ const GroupDetail = () => {
 
     if (result.ok && result.action === "copied") {
       toast({ title: t.groupDetail.inviteCopied });
+    } else if (result.action === "failed") {
+      toast({ title: t.groupDetail.copyInviteLink, description: url });
     }
   };
 
