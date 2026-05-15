@@ -51,8 +51,10 @@ const GroupPhotos = () => {
       if (!user || !id) throw new Error("로그인이 필요합니다");
       setUploading(true);
       const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${id}/${user.id}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("group-images").upload(path, file, { upsert: false });
+      const path = `${user.id}/${id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("group-images")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("group-images").getPublicUrl(path);
       const { error } = await supabase.from("group_photos").insert({
