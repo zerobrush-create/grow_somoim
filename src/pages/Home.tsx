@@ -171,6 +171,7 @@ const Home = () => {
   });
 
   const quickMenu = [
+    { to: "/groups?mine=1", label: t.home.quickMyGroups, icon: Users, color: "bg-teal-100 text-teal-700" },
     { to: "/points", label: t.home.quickPoints, icon: Coins, color: "bg-amber-100 text-amber-700" },
     { to: "/stores", label: t.home.quickStores, icon: Store, color: "bg-emerald-100 text-emerald-700" },
     { to: "/recommendations", label: t.home.quickRecommend, icon: Sparkles, color: "bg-pink-100 text-pink-700" },
