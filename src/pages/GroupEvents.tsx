@@ -25,6 +25,8 @@ import { useEventReminder } from "@/hooks/useEventReminder";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { displayText, formatDateTime, formatMonthTitle, weekdayLabels } from "@/i18n/format";
 
+type EventKind = "regular" | "special";
+
 type EventRow = {
   id: string;
   title: string;
@@ -32,9 +34,16 @@ type EventRow = {
   location: string | null;
   starts_at: string;
   max_attendees: number | null;
+  event_type: EventKind | null;
 };
 
-const GroupEvents = ({ embedded = false, groupId }: { embedded?: boolean; groupId?: string } = {}) => {
+type GroupEventsProps = {
+  embedded?: boolean;
+  groupId?: string;
+  eventType?: EventKind;
+};
+
+const GroupEvents = ({ embedded = false, groupId, eventType }: GroupEventsProps = {}) => {
   const params = useParams();
   const id = groupId ?? params.id;
   const navigate = useNavigate();
@@ -53,14 +62,24 @@ const GroupEvents = ({ embedded = false, groupId }: { embedded?: boolean; groupI
   const tr = (value?: string | null) => displayText(value, lang);
 
   const { data: events, isLoading } = useQuery({
-    queryKey: ["group-events", id],
+    queryKey: ["group-events", id, eventType ?? "all"],
     enabled: !!id,
     queryFn: async (): Promise<EventRow[]> => {
-      const { data, error } = await supabase
-        .from("events")
-        .select("id,title,description,location,starts_at,max_attendees")
-        .eq("group_id", id!)
-        .order("starts_at", { ascending: true });
+      const select = "id,title,description,location,starts_at,max_attendees,event_type";
+      const request = eventType
+        ? supabase
+          .from("events")
+          .select(select)
+          .eq("group_id", id!)
+          .eq("event_type", eventType)
+          .order("starts_at", { ascending: true })
+        : supabase
+          .from("events")
+          .select(select)
+          .eq("group_id", id!)
+          .order("starts_at", { ascending: true });
+
+      const { data, error } = await request;
       if (error) throw error;
       return data ?? [];
     },
@@ -88,6 +107,7 @@ const GroupEvents = ({ embedded = false, groupId }: { embedded?: boolean; groupI
         location: location.trim() || null,
         starts_at: new Date(startsAt).toISOString(),
         max_attendees: maxAttendees ? Number(maxAttendees) : null,
+        event_type: eventType ?? "regular",
         created_by: user.id,
         status: "upcoming",
       });

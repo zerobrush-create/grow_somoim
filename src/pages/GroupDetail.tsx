@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, Zap, Copy } from "lucide-react";
+import { ArrowLeft, Share2, Heart, Users, MessageCircle, Image, Settings, UserCheck, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -313,14 +313,12 @@ const GroupDetail = () => {
           )}
           {activeTab === "meetups" && (
             <div className="px-4 py-4">
-              <GroupEvents embedded groupId={group.id} />
+              <GroupEvents embedded groupId={group.id} eventType="regular" />
             </div>
           )}
           {activeTab === "flash" && (
-            <div className="px-4 py-6 text-center">
-              <Zap className="h-10 w-10 mx-auto mb-2 opacity-40 text-accent" />
-              <p className="text-sm text-muted-foreground mb-4">{t.groupDetail.flashDesc}</p>
-              <Button variant="outline" onClick={() => navigate(`/groups/${group.id}/events`)}>{t.groupDetail.viewFlash}</Button>
+            <div className="px-4 py-4">
+              <GroupEvents embedded groupId={group.id} eventType="special" />
             </div>
           )}
           {activeTab === "chat" && (

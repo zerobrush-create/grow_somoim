@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, ChevronDown, ChevronUp, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays } from "lucide-react";
+import { Search, Bell, MapPin, TrendingUp, Sparkles, ChevronRight, ChevronDown, ChevronUp, Users, Coins, Store, Megaphone, Crown, ShieldCheck, GraduationCap, UserPlus, Heart, CalendarDays, Languages } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { categories } from "@/data/mock";
@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGE_LABELS } from "@/contexts/LanguageContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type { Language } from "@/i18n/translations";
 import logo from "@/assets/grow-logo.png";
 
 type HomeGroup = {
@@ -37,7 +39,7 @@ const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
-  const { t } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [quickExpanded, setQuickExpanded] = useState(false);
   const [categoryExpanded, setCategoryExpanded] = useState(false);
@@ -204,10 +206,35 @@ const Home = () => {
               </p>
             </div>
           </div>
-          <button onClick={() => navigate("/notifications")} className="relative p-2 rounded-full border border-border/70 bg-background/85 text-foreground shadow-soft backdrop-blur hover:bg-card transition-smooth dark:bg-background/75 dark:text-white" aria-label={t.profile.notifications}>
-            <Bell className="h-5 w-5" />
-            {!!unread && unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
-          </button>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="h-11 w-11 rounded-full border border-border/70 bg-background/85 text-foreground shadow-soft backdrop-blur flex items-center justify-center hover:bg-card transition-smooth dark:bg-background/75 dark:text-white"
+                  aria-label={t.profile.languageChange}
+                >
+                  <Languages className="h-5.5 w-5.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {(Object.entries(LANGUAGE_LABELS) as [Language, { flag: string; label: string }][]).map(([code, { flag, label }]) => (
+                  <DropdownMenuItem
+                    key={code}
+                    onClick={() => setLang(code)}
+                    className={`gap-2 ${lang === code ? "font-semibold text-primary" : ""}`}
+                  >
+                    <span className="text-xl">{flag}</span>
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button onClick={() => navigate("/notifications")} className="relative h-11 w-11 rounded-full border border-border/70 bg-background/85 text-foreground shadow-soft backdrop-blur flex items-center justify-center hover:bg-card transition-smooth dark:bg-background/75 dark:text-white" aria-label={t.profile.notifications}>
+              <Bell className="h-5 w-5" />
+              {!!unread && unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-accent text-[10px] text-accent-foreground font-bold flex items-center justify-center">{unread}</span>}
+            </button>
+          </div>
         </div>
 
         <Link to="/search" className="flex items-center gap-2 bg-card rounded-2xl px-4 py-3 shadow-soft transition-smooth hover:shadow-card">
