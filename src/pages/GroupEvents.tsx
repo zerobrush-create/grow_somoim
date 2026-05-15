@@ -300,17 +300,15 @@ const GroupEvents = ({ embedded = false, groupId, eventType }: GroupEventsProps 
                     {ev.location && <MapLink location={ev.location} className="text-xs text-muted-foreground" label={tr(ev.location)} />}
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
-                      {tr("참석")} {goingCount}{ev.max_attendees ? `/${ev.max_attendees}` : ""} · {tr("미정")} {countFor(ev.id, "maybe")}
+                      {tr("참석")} {goingCount}{ev.max_attendees ? `/${ev.max_attendees}` : ""}
                     </span>
                   </div>
                   {ev.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{tr(ev.description)}</p>}
                   {user && (
-                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                    <div className="pt-1">
                       <Button size="sm" variant={mine === "going" ? "default" : "outline"} disabled={rsvp.isPending || full} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "going" ? null : "going" })}>
                         {full && (mine as string) !== "going" ? tr("마감") : tr("참석")}
                       </Button>
-                      <Button size="sm" variant={mine === "maybe" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "maybe" ? null : "maybe" })}>{tr("미정")}</Button>
-                      <Button size="sm" variant={mine === "declined" ? "default" : "outline"} disabled={rsvp.isPending} onClick={() => rsvp.mutate({ eventId: ev.id, status: mine === "declined" ? null : "declined" })}>{tr("불참")}</Button>
                     </div>
                   )}
                 </div>
