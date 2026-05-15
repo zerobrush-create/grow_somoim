@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MentionInput } from "@/components/MentionInput";
@@ -59,6 +59,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<BoardFilter>("review");
   const [openPostId, setOpenPostId] = useState<number | null>(null);
 
   const { data: group } = useQuery({
@@ -74,8 +75,14 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   });
 
   const isMember = membership?.status === "approved" || group?.owner_id === user?.id;
+  const isOwner = !!user && group?.owner_id === user.id;
+  const writableCategories = isOwner ? BOARD_FILTERS : BOARD_FILTERS.filter((item) => item.id !== "notice");
   const rootClassName = embedded ? "relative bg-background" : "min-h-screen bg-background";
   const shellClassName = embedded ? "w-full pb-5" : "mx-auto max-w-md pb-24";
+  const openComposer = () => {
+    setSelectedCategory(filter === "notice" && !isOwner ? "review" : filter);
+    setOpen(true);
+  };
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ["board-posts", id],
@@ -107,8 +114,23 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
     mutationFn: async () => {
       if (!user || !id) throw new Error(tr("로그인이 필요합니다"));
       if (!title.trim() || !content.trim()) throw new Error(tr("제목과 내용을 입력해주세요"));
+      if (selectedCategory === "notice" && !isOwner) throw new Error(tr("공지는 모임장만 작성할 수 있어요"));
+      const rawTitle = title.trim();
+      const combinedText = `${rawTitle} ${content}`;
+      const decoratedTitle =
+        selectedCategory === "notice" && !/공지|필독|notice/i.test(combinedText)
+          ? `[공지] ${rawTitle}`
+          : selectedCategory === "review" && !/모임후기|후기|리뷰|review/i.test(combinedText)
+            ? `[모임후기] ${rawTitle}`
+            : selectedCategory === "greeting" && !/가입인사|가입 인사|안녕하세요|반갑/i.test(combinedText)
+              ? `[가입인사] ${rawTitle}`
+              : rawTitle;
       const { data: post, error } = await supabase.from("board_posts").insert({
-        group_id: id, author_id: user.id, title: title.trim(), content: content.trim(),
+        group_id: id,
+        author_id: user.id,
+        title: decoratedTitle,
+        content: content.trim(),
+        is_pinned: selectedCategory === "notice",
       }).select("id").single();
       if (error) throw error;
       if (post && images.length > 0) {
@@ -190,14 +212,29 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
 
         {isMember && (
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "absolute bottom-4 right-4" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
-                <Plus className="h-6 w-6" />
-              </Button>
-            </DialogTrigger>
+            <Button onClick={openComposer} className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "absolute bottom-4 right-4" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
+              <Plus className="h-6 w-6" />
+            </Button>
             <DialogContent className="max-w-md">
               <DialogHeader><DialogTitle>{tr("새 게시글")}</DialogTitle></DialogHeader>
               <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                  {writableCategories.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(item.id)}
+                      className={cn(
+                        "flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-smooth",
+                        selectedCategory === item.id
+                          ? "bg-foreground text-background"
+                          : "bg-muted text-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {tr(item.label)}
+                    </button>
+                  ))}
+                </div>
                 <Input placeholder={tr("제목")} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
                 <Textarea placeholder={tr("내용 입력 (#태그 사용 가능)")} value={content} onChange={(e) => setContent(e.target.value)} rows={6} maxLength={2000} />
                 <ImageUploader value={images} onChange={setImages} max={5} />

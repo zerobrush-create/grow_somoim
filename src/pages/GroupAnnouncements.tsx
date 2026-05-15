@@ -44,6 +44,7 @@ const GroupAnnouncements = () => {
   const create = useMutation({
     mutationFn: async () => {
       if (!user || !id) throw new Error("로그인이 필요합니다");
+      if (!isOwner) throw new Error("공지는 모임장만 작성할 수 있어요");
       if (!title.trim() || !content.trim()) throw new Error("제목과 내용을 입력해주세요");
       const { error } = await supabase.from("announcements").insert({
         group_id: id, author_id: user.id, title: title.trim(), content: content.trim(),
@@ -59,7 +60,11 @@ const GroupAnnouncements = () => {
   });
 
   const remove = useMutation({
-    mutationFn: async (aid: number) => { const { error } = await supabase.from("announcements").delete().eq("id", aid); if (error) throw error; },
+    mutationFn: async (aid: number) => {
+      if (!isOwner) throw new Error("공지는 모임장만 삭제할 수 있어요");
+      const { error } = await supabase.from("announcements").delete().eq("id", aid);
+      if (error) throw error;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements", id] }),
     onError: (e: Error) => toast({ title: "삭제 실패", description: e.message, variant: "destructive" }),
   });
