@@ -77,10 +77,19 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
   const isMember = membership?.status === "approved" || group?.owner_id === user?.id;
   const isOwner = !!user && group?.owner_id === user.id;
   const writableCategories = isOwner ? BOARD_FILTERS : BOARD_FILTERS.filter((item) => item.id !== "notice");
+  const canWriteCurrentCategory = isMember && (filter !== "notice" || isOwner);
   const rootClassName = embedded ? "relative bg-background" : "min-h-screen bg-background";
   const shellClassName = embedded ? "w-full pb-5" : "mx-auto max-w-md pb-24";
   const openComposer = () => {
-    setSelectedCategory(filter === "notice" && !isOwner ? "review" : filter);
+    if (filter === "notice" && !isOwner) {
+      toast({
+        title: tr("작성 권한이 없어요"),
+        description: tr("공지는 모임장만 작성할 수 있어요"),
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedCategory(filter);
     setOpen(true);
   };
 
@@ -210,7 +219,7 @@ const GroupBoard = ({ embedded = false, groupId }: { embedded?: boolean; groupId
           )}
         </div>
 
-        {isMember && (
+        {canWriteCurrentCategory && (
           <Dialog open={open} onOpenChange={setOpen}>
             <Button onClick={openComposer} className={cn("h-14 w-14 rounded-full gradient-primary shadow-glow z-40", embedded ? "absolute bottom-4 right-4" : "fixed bottom-6 right-1/2 translate-x-[180px]")} aria-label={tr("글쓰기")}>
               <Plus className="h-6 w-6" />
